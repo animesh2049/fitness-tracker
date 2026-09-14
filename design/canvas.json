@@ -1,0 +1,17 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Today", "x": 0, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "Session.dc.html", "title": "Active session", "x": 480, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "TimedSet.dc.html", "title": "Timed set", "x": 960, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "Routine.dc.html", "title": "Routine cycle", "x": 1440, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "GroupEditor.dc.html", "title": "Edit group", "x": 0, "y": 980, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "History.dc.html", "title": "History", "x": 480, "y": 980, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "Progress.dc.html", "title": "Progress", "x": 960, "y": 980, "w": 390, "h": 844, "is_interactive": true }
+  ],
+  "annotations": [
+    { "id": "flow-session", "x": 0, "y": -170, "w": 420, "text": "Session flow: Today → Start session → Active session (weight sets, rest timer) → Timed set (plank) → session summary.\nOn Today, Accept or Keep each progression suggestion, then try Skip, Rest and Swap." },
+    { "id": "flow-plan", "x": 1440, "y": -140, "w": 380, "text": "Plan tab: Routine cycle (tap a slot to swap it in) and Edit group (add or remove sets, toggle warm-up, link a superset)." },
+    { "id": "system", "x": 1440, "y": 980, "w": 380, "text": "Visual system: near-black #0e0f11 ground, one lime accent #c8f03c for the primary action and progress, amber for warm-up and countdown, red only for missed or skipped.\nIBM Plex Sans for UI, IBM Plex Mono for every number. Min hit target 44 px. No status bar drawn; the real one sits on top." }
+  ],
+  "launch": { "view": "canvas" }
+}

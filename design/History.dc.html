@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 28px 20px 12px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">History</div>
+    <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">September 2026</div>
+    <div style="font-size: 14px; color: #8b9096;">10 sessions · 1 skipped · 3 rest days</div>
+  </div>
+
+  <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px;">
+        <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7076;">M</div>
+        <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7076;">T</div>
+        <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7076;">W</div>
+        <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7076;">T</div>
+        <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7076;">F</div>
+        <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7076;">S</div>
+        <div style="text-align: center; font-size: 11px; font-weight: 600; color: #6b7076;">S</div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px;">
+        <sc-for list="{{cells}}" as="c" hint-placeholder-count="35">
+          <button onClick="{{c.pick}}" style="{{c.style}}">
+            <div class="mono" style="font-size: 14px; font-weight: 500;">{{c.label}}</div>
+            <div style="{{c.dotStyle}}"></div>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display: flex; gap: 14px; padding: 4px 4px 0; font-size: 12px; color: #8b9096;">
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 4px; background: #c8f03c;"></div>Trained</div>
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 4px; background: #3a3f46;"></div>Rest</div>
+        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 4px; background: #ff6b5c;"></div>Skipped</div>
+      </div>
+    </div>
+
+    <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 10px;">
+        <div style="font-size: 17px; font-weight: 600;">{{detailTitle}}</div>
+        <div style="font-size: 13px; color: #8b9096; white-space: nowrap;">{{detailDate}}</div>
+      </div>
+      <sc-if value="{{hasSession}}" hint-placeholder-val="{{ true }}">
+        <div class="mono" style="font-size: 13px; color: #8b9096;">{{detailMeta}}</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <sc-for list="{{detailRows}}" as="r" hint-placeholder-count="5">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 28px;">
+              <div style="font-size: 14px;">{{r.name}}</div>
+              <div class="mono" style="font-size: 13px; color: {{r.color}}; white-space: nowrap;">{{r.result}}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; gap: 8px; padding-top: 4px;">
+          <button style="flex: 1 1 0; height: 40px; border-radius: 8px; background: transparent; color: #b4b8bd; border: 1px solid #2c3036; font-size: 13px; font-weight: 500;">Edit</button>
+          <button style="flex: 1 1 0; height: 40px; border-radius: 8px; background: transparent; color: #8b9096; border: 1px solid #2c3036; font-size: 13px; font-weight: 500;">Delete</button>
+        </div>
+      </sc-if>
+      <sc-if value="{{noSession}}" hint-placeholder-val="{{ false }}">
+        <div style="font-size: 14px; color: #8b9096; line-height: 1.4;">{{detailBody}}</div>
+      </sc-if>
+    </div>
+  </div>
+
+  <div style="height: 72px; border-top: 1px solid #1f2226; background: #0e0f11; display: flex; align-items: stretch; flex-shrink: 0;">
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Today</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #c8f03c;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">History</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Progress</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Plan</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const PUSH = [['Bench press', '8 · 8 · 7 at 60 kg', false], ['Overhead press', '10 · 8 · 7 at 30 kg', false], ['Incline dumbbell press', '10 · 10 · 10 at 22.5 kg', true], ['Triceps pushdown', '12 · 12 · 10 at 25 kg', false], ['Plank', '45 · 45 · 45 s', true]];
+const PULL = [['Deadlift', '5 · 5 · 5 at 100 kg', true], ['Pull-up', '8 · 8 · 8', true], ['Barbell row', '10 · 10 · 8 at 50 kg', false], ['Face pull', '15 · 15 · 15 at 15 kg', true], ['Hamstring stretch', '60 · 60 s', true]];
+const LEGS = [['Back squat', '5 · 5 · 5 at 80 kg', true], ['Romanian deadlift', '8 · 8 · 8 at 70 kg', true], ['Leg press', '12 · 12 · 12 at 120 kg', true], ['Calf raise', '15 · 15 · 15 at 40 kg', true], ['Couch stretch', '45 · 45 s', true]];
+const DAYS = {
+  1: { kind: 'trained', group: 'Push day', meta: '46 min · 15 sets · 3.9 t', rows: PUSH },
+  2: { kind: 'trained', group: 'Pull day', meta: '51 min · 14 sets · 4.6 t', rows: PULL },
+  3: { kind: 'trained', group: 'Legs day', meta: '55 min · 14 sets · 8.1 t', rows: LEGS },
+  4: { kind: 'rest' },
+  5: { kind: 'trained', group: 'Push day', meta: '44 min · 15 sets · 4.0 t', rows: PUSH },
+  6: { kind: 'trained', group: 'Pull day', meta: '49 min · 14 sets · 4.7 t', rows: PULL },
+  7: { kind: 'skipped', group: 'Legs day' },
+  8: { kind: 'trained', group: 'Legs day', meta: '58 min · 14 sets · 8.3 t', rows: LEGS },
+  9: { kind: 'rest' },
+  10: { kind: 'trained', group: 'Push day', meta: '47 min · 15 sets · 4.0 t', rows: PUSH },
+  11: { kind: 'trained', group: 'Pull day', meta: '50 min · 14 sets · 4.8 t', rows: PULL },
+  12: { kind: 'trained', group: 'Legs day', meta: '54 min · 14 sets · 8.4 t', rows: LEGS },
+  13: { kind: 'rest' }
+};
+const WEEKDAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const TODAY = 14;
+
+class Component extends DCLogic {
+  state = { sel: 12 };
+
+  renderVals() {
+    const sel = this.state.sel;
+    const cells = [];
+    const cellBase = 'height: 48px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; box-sizing: border-box; padding: 0; ';
+    cells.push({ label: '', style: cellBase + 'background: transparent; border: 0;', dotStyle: 'display: none;', pick: () => {} });
+    for (let d = 1; d <= 30; d++) {
+      const info = DAYS[d];
+      const isSel = d === sel;
+      const isToday = d === TODAY;
+      const future = d > TODAY;
+      let color = future ? '#3a3f46' : '#ecedee';
+      let bg = 'background: transparent; border: 1px solid transparent;';
+      if (isSel) bg = 'background: #17191c; border: 1px solid #c8f03c;';
+      else if (isToday) bg = 'background: transparent; border: 1px solid #3a3f46;';
+      let dot = 'width: 6px; height: 6px; border-radius: 3px; background: ';
+      if (info && info.kind === 'trained') dot += '#c8f03c;';
+      else if (info && info.kind === 'rest') dot += '#3a3f46;';
+      else if (info && info.kind === 'skipped') dot += '#ff6b5c;';
+      else dot += 'transparent;';
+      cells.push({ label: String(d), style: cellBase + bg + ' color: ' + color + ';', dotStyle: dot, pick: () => this.setState({ sel: d }) });
+    }
+    while (cells.length < 35) cells.push({ label: '', style: cellBase + 'background: transparent; border: 0;', dotStyle: 'display: none;', pick: () => {} });
+
+    const info = DAYS[sel];
+    const wd = WEEKDAY[(sel + 0) % 7];
+    const detailDate = wd + ' ' + sel + ' Sep';
+    let detailTitle = '', detailBody = '', detailMeta = '', detailRows = [];
+    let hasSession = false;
+    if (info && info.kind === 'trained') {
+      hasSession = true;
+      detailTitle = info.group;
+      detailMeta = info.meta;
+      detailRows = info.rows.map((r) => ({ name: r[0], result: r[1], color: r[2] ? '#c8f03c' : '#b4b8bd' }));
+    } else if (info && info.kind === 'rest') {
+      detailTitle = 'Rest day';
+      detailBody = 'Scheduled rest. Cycle advanced the next morning.';
+    } else if (info && info.kind === 'skipped') {
+      detailTitle = 'Skipped';
+      detailBody = info.group + ' was skipped. The cycle moved on to the next slot.';
+    } else if (sel === TODAY) {
+      detailTitle = 'Today';
+      detailBody = 'Push day is scheduled. Nothing logged yet.';
+    } else {
+      detailTitle = 'No session';
+      detailBody = sel > TODAY ? 'This day has not happened yet.' : 'Nothing was logged on this day.';
+    }
+
+    return { cells, detailTitle, detailDate, detailMeta, detailRows, detailBody, hasSession, noSession: !hasSession };
+  }
+}
+</script>
+</body>
+</html>
