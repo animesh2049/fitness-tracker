@@ -48,4 +48,11 @@ interface ExerciseDao {
 
     @Query("DELETE FROM exercises WHERE id = :id")
     suspend fun delete(id: Long)
+
+    // Backup support (appended for Milestone 5/6).
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllReplace(exercises: List<Exercise>): List<Long>
+
+    @Query("DELETE FROM exercises")
+    suspend fun deleteAll()
 }

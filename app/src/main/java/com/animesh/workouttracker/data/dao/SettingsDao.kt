@@ -17,4 +17,8 @@ interface SettingsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(settings: Settings)
+
+    // Backup support (appended for Milestone 5/6).
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnore(settings: Settings): Long
 }

@@ -5,7 +5,9 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(tableName = "exercises", indices = [Index("name", unique = true)])
 data class Exercise(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -37,6 +39,7 @@ data class Exercise(
     }
 }
 
+@Serializable
 @Entity(tableName = "workout_groups")
 data class WorkoutGroup(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -47,6 +50,7 @@ data class WorkoutGroup(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+@Serializable
 @Entity(
     tableName = "group_exercises",
     foreignKeys = [
@@ -63,6 +67,7 @@ data class GroupExercise(
     val supersetWithNext: Boolean = false
 )
 
+@Serializable
 @Entity(
     tableName = "set_prescriptions",
     foreignKeys = [
@@ -81,6 +86,7 @@ data class SetPrescription(
     val restSecondsOverride: Int? = null
 )
 
+@Serializable
 @Entity(tableName = "routines")
 data class Routine(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -99,6 +105,7 @@ data class Routine(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+@Serializable
 @Entity(
     tableName = "routine_slots",
     foreignKeys = [
@@ -115,6 +122,7 @@ data class RoutineSlot(
     val groupId: Long?
 )
 
+@Serializable
 @Entity(tableName = "sessions", indices = [Index("epochDay"), Index("status")])
 data class Session(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -129,6 +137,7 @@ data class Session(
     val notes: String = ""
 )
 
+@Serializable
 @Entity(
     tableName = "session_exercises",
     foreignKeys = [
@@ -151,6 +160,7 @@ data class SessionExercise(
     val skipped: Boolean = false
 )
 
+@Serializable
 @Entity(
     tableName = "session_sets",
     foreignKeys = [
@@ -183,6 +193,7 @@ data class SessionSet(
         }
 }
 
+@Serializable
 @Entity(tableName = "day_logs", indices = [Index("epochDay")])
 data class DayLog(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -192,6 +203,7 @@ data class DayLog(
     val createdAt: Long = System.currentTimeMillis()
 )
 
+@Serializable
 @Entity(tableName = "settings")
 data class Settings(
     @PrimaryKey val id: Int = 1,

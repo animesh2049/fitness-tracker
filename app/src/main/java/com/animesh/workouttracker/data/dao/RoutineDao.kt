@@ -8,6 +8,7 @@ import androidx.room.Update
 import com.animesh.workouttracker.data.model.Routine
 import com.animesh.workouttracker.data.model.RoutineSlot
 import com.animesh.workouttracker.data.model.RoutineWithSlots
+import androidx.room.OnConflictStrategy
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -67,4 +68,23 @@ interface RoutineDao {
         clearActive()
         markActive(id)
     }
+
+    // Backup support (appended for Milestone 5/6).
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRoutinesReplace(routines: List<Routine>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertRoutinesIgnore(routines: List<Routine>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSlotsReplace(slots: List<RoutineSlot>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSlotsIgnore(slots: List<RoutineSlot>): List<Long>
+
+    @Query("DELETE FROM routines")
+    suspend fun deleteAllRoutines()
+
+    @Query("DELETE FROM routine_slots")
+    suspend fun deleteAllSlots()
 }
