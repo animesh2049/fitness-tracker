@@ -146,6 +146,9 @@ class SessionRepository(private val db: AppDatabase) {
     suspend fun updateSession(session: Session) = dao.updateSession(session)
     suspend fun delete(sessionId: Long) = dao.deleteSession(sessionId)
 
+    /** Removes the rest or skipped record for a day. Does not touch the routine's cycle position. */
+    suspend fun clearDayLog(epochDay: Long) = dao.deleteDayLogsOn(epochDay)
+
     suspend fun logDay(epochDay: Long, kind: DayLogKind, groupName: String) = db.withTransaction {
         dao.deleteDayLogsOn(epochDay)
         dao.insertDayLog(DayLog(epochDay = epochDay, kind = kind, groupName = groupName))
