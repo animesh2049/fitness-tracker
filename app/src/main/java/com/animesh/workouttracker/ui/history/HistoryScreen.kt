@@ -58,6 +58,7 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit) {
     val vm: HistoryViewModel = viewModel { HistoryViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<Long?>(null) }
+    var pendingDayLogDelete by remember { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
@@ -83,10 +84,11 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit) {
                 is DayDetail.Sessions -> d.sessions.forEach { s ->
                     SessionCard(s, state.selectedLabel, onEdit = { onOpenSession(s.id) }, onDelete = { pendingDelete = s.id })
                 }
-                DayDetail.Rest -> InfoCard("Rest day", state.selectedLabel, "Scheduled rest. Nothing to log.")
+                DayDetail.Rest -> InfoCard("Rest day", state.selectedLabel, "Scheduled rest. Nothing to log.", onDelete = { pendingDayLogDelete = "rest day" })
                 is DayDetail.Skipped -> InfoCard(
                     "Skipped", state.selectedLabel,
-                    if (d.groupName.isBlank()) "The workout was skipped. The cycle moved on." else "${d.groupName} was skipped. The cycle moved on."
+                    if (d.groupName.isBlank()) "The workout was skipped. The cycle moved on." else "${d.groupName} was skipped. The cycle moved on.",
+                    onDelete = { pendingDayLogDelete = "skipped day" }
                 )
                 DayDetail.TodayEmpty -> InfoCard("Today", state.selectedLabel, "Nothing logged yet.")
                 is DayDetail.None -> InfoCard(
@@ -95,6 +97,17 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit) {
                 )
             }
         }
+    }
+
+    pendingDayLogDelete?.let { what ->
+        ConfirmDialog(
+            title = "Delete this $what record?",
+            body = "The day is cleared in History. The routine's cycle position stays where it is.",
+            confirmText = "Delete",
+            destructive = true,
+            onConfirm = { vm.deleteDayLog(); pendingDayLogDelete = null },
+            onDismiss = { pendingDayLogDelete = null }
+        )
     }
 
     pendingDelete?.let { id ->
@@ -235,9 +248,12 @@ private fun SessionCard(s: SessionSummary, date: String, onEdit: () -> Unit, onD
 }
 
 @Composable
-private fun InfoCard(title: String, date: String, body: String) {
+private fun InfoCard(title: String, date: String, body: String, onDelete: (() -> Unit)? = null) {
     AppCard {
         CardTitleRow(title, date)
         Text(body, style = MaterialTheme.typography.bodyMedium, color = Tokens.Muted)
+        if (onDelete != null) {
+            GhostButton("Delete record", onDelete, Modifier.fillMaxWidth(), contentColor = Tokens.Muted)
+        }
     }
 }

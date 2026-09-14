@@ -193,4 +193,10 @@ class HistoryViewModel(private val c: AppContainer) : ViewModel() {
     fun deleteSession(id: Long) {
         viewModelScope.launch { c.sessions.delete(id) }
     }
+
+    /** Deletes the rest or skipped log of the selected day. */
+    fun deleteDayLog() {
+        val day = selected.value
+        viewModelScope.launch { c.sessions.clearDayLog(day) }
+    }
 }
