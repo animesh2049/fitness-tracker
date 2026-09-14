@@ -32,7 +32,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.animesh.workouttracker.R
+import com.animesh.workouttracker.ui.history.historyGraph
+import com.animesh.workouttracker.ui.plan.planGraph
+import com.animesh.workouttracker.ui.progress.progressGraph
 import com.animesh.workouttracker.ui.session.SessionScreen
+import com.animesh.workouttracker.ui.settings.SettingsRoutes
+import com.animesh.workouttracker.ui.settings.settingsGraph
 import com.animesh.workouttracker.ui.theme.Tokens
 import com.animesh.workouttracker.ui.today.TodayScreen
 
@@ -49,7 +54,7 @@ object Routes {
 }
 
 /** Routes that take over the whole screen (no bottom bar). */
-private val fullScreenRoutes = setOf(Routes.SESSION)
+private val fullScreenRoutes = setOf(Routes.SESSION, SettingsRoutes.SETTINGS)
 
 @Composable
 fun WorkoutApp() {
@@ -70,7 +75,8 @@ fun WorkoutApp() {
             composable(TopLevel.Today.route) {
                 TodayScreen(
                     onOpenSession = { navController.navigate(Routes.session(it)) },
-                    onOpenPlan = { navController.navigateTop(TopLevel.Plan) }
+                    onOpenPlan = { navController.navigateTop(TopLevel.Plan) },
+                    onOpenSettings = { navController.navigate(SettingsRoutes.SETTINGS) }
                 )
             }
             composable(
@@ -80,9 +86,10 @@ fun WorkoutApp() {
                 val id = entry.arguments?.getLong("sessionId") ?: return@composable
                 SessionScreen(sessionId = id, onClose = { navController.popBackStack() })
             }
-            composable(TopLevel.History.route) { Placeholder("History") }
-            composable(TopLevel.Progress.route) { Placeholder("Progress") }
-            composable(TopLevel.Plan.route) { Placeholder("Plan") }
+            historyGraph(navController)
+            progressGraph(navController)
+            planGraph(navController)
+            settingsGraph(navController)
         }
     }
 }
@@ -100,7 +107,7 @@ private fun BottomBar(navController: NavHostController, activeRoutes: Set<String
     NavigationBar(containerColor = Tokens.Ground, tonalElevation = 0.dp) {
         TopLevel.entries.forEach { top ->
             NavigationBarItem(
-                selected = top.route in activeRoutes,
+                selected = activeRoutes.any { it == top.route || it.startsWith(top.route + "/") },
                 onClick = { navController.navigateTop(top) },
                 icon = { Icon(top.icon, contentDescription = null) },
                 label = { Text(stringResource(top.labelRes), style = MaterialTheme.typography.labelSmall) },

@@ -17,6 +17,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.NightsStay
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,7 +48,7 @@ import com.animesh.workouttracker.ui.theme.MonoNumber
 import com.animesh.workouttracker.ui.theme.Tokens
 
 @Composable
-fun TodayScreen(onOpenSession: (Long) -> Unit, onOpenPlan: () -> Unit) {
+fun TodayScreen(onOpenSession: (Long) -> Unit, onOpenPlan: () -> Unit, onOpenSettings: () -> Unit) {
     val container = appContainer()
     val vm: TodayViewModel = viewModel { TodayViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -57,18 +60,23 @@ fun TodayScreen(onOpenSession: (Long) -> Unit, onOpenPlan: () -> Unit) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) else vm.startSession()
     }
 
+    val settingsButton: @Composable () -> Unit = {
+        IconButton(onClick = onOpenSettings, modifier = Modifier.size(44.dp)) {
+            Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Tokens.Muted)
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         when (val ui = state.ui) {
             TodayUi.Loading -> Spacer(Modifier.weight(1f))
             TodayUi.NoRoutine -> {
-                ScreenHeader(state.dateLine, "No routine")
+                ScreenHeader(state.dateLine, "No routine", trailing = settingsButton)
                 EmptyState(
                     "Nothing scheduled", "Create a routine under Plan to see what to do each day.",
                     modifier = Modifier.weight(1f)
                 ) { SecondaryButton("Open Plan", onOpenPlan) }
             }
             is TodayUi.Rest -> {
-                ScreenHeader(state.dateLine, ui.title, ui.subtitle)
+                ScreenHeader(state.dateLine, ui.title, ui.subtitle, trailing = settingsButton)
                 if (state.showSwap) {
                     SwapPicker(state, vm, Modifier.weight(1f))
                 } else {
@@ -91,7 +99,7 @@ fun TodayScreen(onOpenSession: (Long) -> Unit, onOpenPlan: () -> Unit) {
                 }
             }
             is TodayUi.Workout -> {
-                ScreenHeader(state.dateLine, if (state.showSwap) "Swap workout" else ui.title, if (state.showSwap) "Scheduled: ${ui.title}" else ui.subtitle)
+                ScreenHeader(state.dateLine, if (state.showSwap) "Swap workout" else ui.title, if (state.showSwap) "Scheduled: ${ui.title}" else ui.subtitle, trailing = settingsButton)
                 if (state.showSwap) {
                     SwapPicker(state, vm, Modifier.weight(1f))
                 } else {
