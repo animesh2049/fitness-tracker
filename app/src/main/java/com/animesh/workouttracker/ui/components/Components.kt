@@ -101,10 +101,11 @@ fun SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modi
         enabled = enabled,
         modifier = modifier.height(height.dp),
         shape = RoundedCornerShape(10.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp),
         border = BorderStroke(1.dp, Tokens.Border),
         colors = ButtonDefaults.buttonColors(containerColor = Tokens.Surface, contentColor = contentColor, disabledContainerColor = Tokens.Surface, disabledContentColor = Tokens.Dim)
     ) {
-        Text(text, style = MaterialTheme.typography.titleSmall)
+        Text(text, style = MaterialTheme.typography.titleSmall, maxLines = 1)
     }
 }
 
@@ -114,10 +115,11 @@ fun GhostButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
         onClick = onClick,
         modifier = modifier.height(height.dp),
         shape = RoundedCornerShape(10.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp),
         border = BorderStroke(1.dp, borderColor),
         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = contentColor)
     ) {
-        Text(text, style = MaterialTheme.typography.titleSmall)
+        Text(text, style = MaterialTheme.typography.titleSmall, maxLines = 1)
     }
 }
 
