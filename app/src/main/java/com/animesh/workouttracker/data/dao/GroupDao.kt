@@ -9,6 +9,7 @@ import com.animesh.workouttracker.data.model.GroupExercise
 import com.animesh.workouttracker.data.model.GroupWithExercises
 import com.animesh.workouttracker.data.model.SetPrescription
 import com.animesh.workouttracker.data.model.WorkoutGroup
+import androidx.room.OnConflictStrategy
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -79,4 +80,32 @@ interface GroupDao {
 
     @Query("SELECT COUNT(*) FROM routine_slots WHERE groupId = :groupId")
     suspend fun routineUsageCount(groupId: Long): Int
+
+    // Backup support (appended for Milestone 5/6).
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertGroupsReplace(groups: List<WorkoutGroup>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertGroupsIgnore(groups: List<WorkoutGroup>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertGroupExercisesReplace(groupExercises: List<GroupExercise>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertGroupExercisesIgnore(groupExercises: List<GroupExercise>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPrescriptionsReplace(sets: List<SetPrescription>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPrescriptionsIgnore(sets: List<SetPrescription>): List<Long>
+
+    @Query("DELETE FROM workout_groups")
+    suspend fun deleteAllGroups()
+
+    @Query("DELETE FROM group_exercises")
+    suspend fun deleteAllGroupExercises()
+
+    @Query("DELETE FROM set_prescriptions")
+    suspend fun deleteAllPrescriptions()
 }
