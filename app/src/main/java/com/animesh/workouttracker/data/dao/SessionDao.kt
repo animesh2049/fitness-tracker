@@ -11,6 +11,7 @@ import com.animesh.workouttracker.data.model.SessionExercise
 import com.animesh.workouttracker.data.model.SessionSet
 import com.animesh.workouttracker.data.model.SessionStatus
 import com.animesh.workouttracker.data.model.SessionWithExercises
+import androidx.room.OnConflictStrategy
 import kotlinx.coroutines.flow.Flow
 
 /** A logged set joined with the date of its session, for progression and charts. */
@@ -150,4 +151,45 @@ interface SessionDao {
 
     @Query("DELETE FROM day_logs WHERE epochDay = :epochDay")
     suspend fun deleteDayLogsOn(epochDay: Long)
+
+    // Backup support (appended for Milestone 5/6).
+    @Transaction
+    @Query("SELECT * FROM sessions WHERE status != 'IN_PROGRESS' ORDER BY startedAt ASC")
+    suspend fun getFinishedSessions(): List<SessionWithExercises>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSessionsReplace(sessions: List<Session>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSessionsIgnore(sessions: List<Session>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSessionExercisesReplace(exercises: List<SessionExercise>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSessionExercisesIgnore(exercises: List<SessionExercise>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSetsReplace(sets: List<SessionSet>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSetsIgnore(sets: List<SessionSet>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDayLogsReplace(logs: List<DayLog>): List<Long>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertDayLogsIgnore(logs: List<DayLog>): List<Long>
+
+    @Query("DELETE FROM sessions")
+    suspend fun deleteAllSessions()
+
+    @Query("DELETE FROM session_exercises")
+    suspend fun deleteAllSessionExercises()
+
+    @Query("DELETE FROM session_sets")
+    suspend fun deleteAllSets()
+
+    @Query("DELETE FROM day_logs")
+    suspend fun deleteAllDayLogs()
 }
