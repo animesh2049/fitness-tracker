@@ -1,0 +1,320 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <sc-if value="{{inSession}}" hint-placeholder-val="{{ true }}">
+    <div style="padding: 24px 20px 12px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Push day · {{exPos}}</div>
+        <button onClick="{{finish}}" style="height: 36px; padding: 0 12px; border-radius: 8px; background: transparent; color: #8b9096; border: 1px solid #2c3036; font-size: 13px; font-weight: 500;">End</button>
+      </div>
+      <div style="display: flex; gap: 4px;">
+        <sc-for list="{{segments}}" as="seg" hint-placeholder-count="4">
+          <div style="{{seg.style}}"></div>
+        </sc-for>
+      </div>
+      <div style="font-size: 28px; font-weight: 600; line-height: 1.1;">{{exName}}</div>
+      <div style="font-size: 14px; color: #8b9096;">Last time <span class="mono" style="color: #b4b8bd;">{{lastText}}</span></div>
+    </div>
+
+    <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <sc-for list="{{sets}}" as="s" hint-placeholder-count="3">
+          <div style="{{s.rowStyle}}">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="{{s.numStyle}}">{{s.num}}</div>
+              <div class="mono" style="font-size: 15px;">{{s.text}}</div>
+            </div>
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: {{s.badgeColor}};">{{s.badge}}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{hasCurrent}}" hint-placeholder-val="{{ true }}">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="font-size: 15px; font-weight: 600;">Set {{curNum}} of {{setCount}}</div>
+            <div class="mono" style="font-size: 13px; color: #8b9096;">target {{curTarget}}</div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+            <div style="background: #0e0f11; border: 1px solid #24272c; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b9096;">Weight kg</div>
+              <div class="mono" style="font-size: 34px; font-weight: 600; line-height: 1;">{{curWeight}}</div>
+              <div style="display: flex; gap: 8px;">
+                <button onClick="{{decW}}" style="width: 52px; height: 44px; border-radius: 10px; background: #1f2226; color: #ecedee; border: 0; font-size: 22px; font-weight: 500;">−</button>
+                <button onClick="{{incW}}" style="width: 52px; height: 44px; border-radius: 10px; background: #1f2226; color: #ecedee; border: 0; font-size: 22px; font-weight: 500;">+</button>
+              </div>
+            </div>
+            <div style="background: #0e0f11; border: 1px solid #24272c; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b9096;">Reps</div>
+              <div class="mono" style="font-size: 34px; font-weight: 600; line-height: 1;">{{curReps}}</div>
+              <div style="display: flex; gap: 8px;">
+                <button onClick="{{decR}}" style="width: 52px; height: 44px; border-radius: 10px; background: #1f2226; color: #ecedee; border: 0; font-size: 22px; font-weight: 500;">−</button>
+                <button onClick="{{incR}}" style="width: 52px; height: 44px; border-radius: 10px; background: #1f2226; color: #ecedee; border: 0; font-size: 22px; font-weight: 500;">+</button>
+              </div>
+            </div>
+          </div>
+          <button onClick="{{doneSet}}" style="height: 56px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 17px; font-weight: 600;">Done set</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{exDone}}" hint-placeholder-val="{{ false }}">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="font-size: 15px; font-weight: 600;">{{exName}} complete</div>
+          <div style="font-size: 13px; color: #8b9096; line-height: 1.4;">{{exResult}}</div>
+          <sc-if value="{{hasNext}}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{nextEx}}" style="height: 52px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 16px; font-weight: 600;">Next: {{nextName}}</button>
+          </sc-if>
+          <sc-if value="{{isLast}}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{finish}}" style="height: 52px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 16px; font-weight: 600;">Finish session</button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <div style="display: flex; gap: 8px;">
+        <button onClick="{{addSet}}" style="flex: 1 1 0; height: 44px; border-radius: 10px; background: transparent; color: #b4b8bd; border: 1px solid #2c3036; font-size: 14px; font-weight: 500;">Add set</button>
+        <button onClick="{{skipEx}}" style="flex: 1 1 0; height: 44px; border-radius: 10px; background: transparent; color: #b4b8bd; border: 1px solid #2c3036; font-size: 14px; font-weight: 500;">Skip exercise</button>
+      </div>
+    </div>
+
+    <sc-if value="{{resting}}" hint-placeholder-val="{{ false }}">
+      <div style="position: absolute; inset: 0; background: #0e0f11; display: flex; flex-direction: column; padding: 28px 20px 20px; box-sizing: border-box;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Rest</div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px;">
+          <div class="mono" style="font-size: 96px; font-weight: 600; line-height: 1; letter-spacing: -0.02em;">{{restText}}</div>
+          <div style="width: 100%; height: 6px; background: #1f2226; border-radius: 3px; overflow: hidden;">
+            <div style="height: 100%; background: #c8f03c; border-radius: 3px; width: {{restPct}}%;"></div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+            <div style="font-size: 13px; color: #8b9096;">Up next</div>
+            <div class="mono" style="font-size: 18px; font-weight: 500;">{{nextText}}</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button onClick="{{addRest}}" style="flex: 1 1 0; height: 56px; border-radius: 12px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 16px; font-weight: 500;">+30 s</button>
+          <button onClick="{{skipRest}}" style="flex: 1 1 0; height: 56px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 16px; font-weight: 600;">Skip rest</button>
+        </div>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{finished}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 28px 20px 12px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Session complete</div>
+      <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">Push day</div>
+      <div style="font-size: 14px; color: #8b9096;">Mon 14 Sep · {{durationText}}</div>
+    </div>
+    <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">Sets</div>
+          <div class="mono" style="font-size: 24px; font-weight: 600;">{{sumSets}}</div>
+        </div>
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">Volume</div>
+          <div class="mono" style="font-size: 24px; font-weight: 600;">{{sumVolume}}</div>
+        </div>
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">Records</div>
+          <div class="mono" style="font-size: 24px; font-weight: 600; color: #c8f03c;">{{sumPRs}}</div>
+        </div>
+      </div>
+      <sc-for list="{{summaryRows}}" as="r" hint-placeholder-count="4">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-size: 15px; font-weight: 500;">{{r.name}}</div>
+            <div class="mono" style="font-size: 13px; color: #8b9096;">{{r.detail}}</div>
+          </div>
+          <div style="font-size: 12px; font-weight: 600; color: {{r.tagColor}}; white-space: nowrap;">{{r.tag}}</div>
+        </div>
+      </sc-for>
+      <div style="background: #161b0d; border: 1px solid #33421a; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 13px; font-weight: 600; color: #c8f03c;">Next time</div>
+        <div style="font-size: 13px; color: #b9c4a3; line-height: 1.4;">Bench press moves to 65 kg. Overhead press stays at 27.5 kg until all sets hit 10.</div>
+      </div>
+    </div>
+    <div style="padding: 12px 16px; flex-shrink: 0; border-top: 1px solid #1f2226;">
+      <button onClick="{{restart}}" style="width: 100%; height: 56px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 17px; font-weight: 600;">Done</button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const EXERCISES = [
+  { name: 'Bench press', reps: 8, weight: 62.5, step: 2.5, rest: 90, last: '8 · 8 · 7 at 60 kg' },
+  { name: 'Overhead press', reps: 10, weight: 27.5, step: 2.5, rest: 90, last: '10 · 8 · 7 at 30 kg' },
+  { name: 'Incline dumbbell press', reps: 11, weight: 22.5, step: 2.5, rest: 60, last: '10 · 10 · 10 at 22.5 kg' },
+  { name: 'Triceps pushdown', reps: 12, weight: 25, step: 2.5, rest: 60, last: '12 · 12 · 10 at 25 kg' }
+];
+function freshSets(ex) {
+  return [0, 1, 2].map(() => ({ reps: ex.reps, weight: ex.weight, done: false, logged: false }));
+}
+function fmtTime(n) {
+  const m = Math.floor(n / 60), s = n % 60;
+  return m + ':' + (s < 10 ? '0' + s : s);
+}
+
+class Component extends DCLogic {
+  state = { exIdx: 0, sets: freshSets(EXERCISES[0]), cur: 0, rest: null, restTotal: 90, history: [], finished: false };
+
+  componentWillUnmount() { this.clearTimer(); }
+  clearTimer() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
+
+  startRest(n) {
+    this.clearTimer();
+    this.setState({ rest: n, restTotal: n });
+    this.timer = setInterval(() => {
+      const r = this.state.rest;
+      if (r == null) { this.clearTimer(); return; }
+      if (r <= 1) { this.clearTimer(); this.setState({ rest: null }); }
+      else this.setState({ rest: r - 1 });
+    }, 1000);
+  }
+
+  adjust(field, delta) {
+    const sets = this.state.sets.slice();
+    const s = Object.assign({}, sets[this.state.cur]);
+    s[field] = Math.max(0, Math.round((s[field] + delta) * 100) / 100);
+    sets[this.state.cur] = s;
+    this.setState({ sets });
+  }
+
+  doneSet() {
+    const ex = EXERCISES[this.state.exIdx];
+    const sets = this.state.sets.slice();
+    sets[this.state.cur] = Object.assign({}, sets[this.state.cur], { done: true });
+    this.setState({ sets, cur: this.state.cur + 1 });
+    this.startRest(ex.rest);
+  }
+
+  nextEx() {
+    const ex = EXERCISES[this.state.exIdx];
+    const history = this.state.history.concat([{ name: ex.name, sets: this.state.sets.filter((s) => s.done), target: ex.reps }]);
+    const idx = this.state.exIdx + 1;
+    this.clearTimer();
+    this.setState({ exIdx: idx, sets: freshSets(EXERCISES[idx]), cur: 0, rest: null, history });
+  }
+
+  finish() {
+    const ex = EXERCISES[this.state.exIdx];
+    const done = this.state.sets.filter((s) => s.done);
+    const history = done.length ? this.state.history.concat([{ name: ex.name, sets: done, target: ex.reps }]) : this.state.history;
+    this.clearTimer();
+    this.setState({ finished: true, rest: null, history });
+  }
+
+  renderVals() {
+    const st = this.state;
+    const ex = EXERCISES[st.exIdx];
+    const isLast = st.exIdx === EXERCISES.length - 1;
+    const hasCurrent = st.cur < st.sets.length;
+    const curSet = hasCurrent ? st.sets[st.cur] : null;
+
+    const sets = st.sets.map((s, i) => {
+      const isCur = i === st.cur;
+      const base = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 10px; min-height: 48px; box-sizing: border-box; ';
+      const numBase = 'width: 28px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; ';
+      let rowStyle, numStyle, badge, badgeColor;
+      if (s.done) {
+        rowStyle = base + 'background: #0e0f11; border: 1px solid #1f2226; color: #b4b8bd;';
+        numStyle = numBase + 'background: #c8f03c; color: #101400;';
+        badge = s.reps >= ex.reps ? 'Hit' : 'Missed';
+        badgeColor = s.reps >= ex.reps ? '#c8f03c' : '#ff6b5c';
+      } else if (isCur) {
+        rowStyle = base + 'background: #17191c; border: 1px solid #c8f03c;';
+        numStyle = numBase + 'background: #1f2226; color: #ecedee;';
+        badge = 'Now'; badgeColor = '#c8f03c';
+      } else {
+        rowStyle = base + 'background: transparent; border: 1px solid #1f2226; color: #6b7076;';
+        numStyle = numBase + 'background: #17191c; color: #6b7076;';
+        badge = ''; badgeColor = '#6b7076';
+      }
+      return { num: i + 1, text: s.reps + ' × ' + s.weight + ' kg', rowStyle, numStyle, badge, badgeColor };
+    });
+
+    const segments = EXERCISES.map((e, i) => ({
+      style: 'flex: 1 1 0; height: 4px; border-radius: 2px; background: ' + (i < st.exIdx ? '#c8f03c' : i === st.exIdx ? '#6f8a1c' : '#1f2226') + ';'
+    }));
+
+    const nextSet = hasCurrent ? st.sets[st.cur] : null;
+    const nextText = nextSet ? 'Set ' + (st.cur + 1) + ' · ' + nextSet.reps + ' × ' + nextSet.weight + ' kg' : (isLast ? 'Finish session' : EXERCISES[st.exIdx + 1].name);
+
+    const doneSets = st.sets.filter((s) => s.done);
+    const hits = doneSets.filter((s) => s.reps >= ex.reps).length;
+    const exResult = hits === doneSets.length ? 'All ' + doneSets.length + ' sets hit target. Next session suggests ' + (ex.weight + ex.step) + ' kg.' : hits + ' of ' + doneSets.length + ' sets hit target. Same weight next session.';
+
+    const allHist = st.history;
+    const sumSets = allHist.reduce((a, h) => a + h.sets.length, 0);
+    const volume = allHist.reduce((a, h) => a + h.sets.reduce((b, s) => b + s.reps * s.weight, 0), 0);
+    const summaryRows = allHist.map((h) => {
+      const hit = h.sets.every((s) => s.reps >= h.target);
+      return {
+        name: h.name,
+        detail: h.sets.map((s) => s.reps).join(' · ') + ' at ' + (h.sets[0] ? h.sets[0].weight : 0) + ' kg',
+        tag: hit ? 'All sets hit' : 'Partial',
+        tagColor: hit ? '#c8f03c' : '#8b9096'
+      };
+    });
+
+    return {
+      inSession: !st.finished,
+      finished: st.finished,
+      exPos: 'Exercise ' + (st.exIdx + 1) + ' of ' + EXERCISES.length,
+      exName: ex.name,
+      lastText: ex.last,
+      segments,
+      sets,
+      hasCurrent,
+      exDone: !hasCurrent,
+      hasNext: !isLast,
+      isLast,
+      nextName: isLast ? '' : EXERCISES[st.exIdx + 1].name,
+      exResult,
+      curNum: st.cur + 1,
+      setCount: st.sets.length,
+      curTarget: ex.reps + ' × ' + ex.weight + ' kg',
+      curWeight: curSet ? curSet.weight : 0,
+      curReps: curSet ? curSet.reps : 0,
+      incW: () => this.adjust('weight', ex.step),
+      decW: () => this.adjust('weight', -ex.step),
+      incR: () => this.adjust('reps', 1),
+      decR: () => this.adjust('reps', -1),
+      doneSet: () => this.doneSet(),
+      addSet: () => this.setState({ sets: st.sets.concat([{ reps: ex.reps, weight: ex.weight, done: false }]) }),
+      skipEx: () => (isLast ? this.finish() : this.nextEx()),
+      nextEx: () => this.nextEx(),
+      finish: () => this.finish(),
+      restart: () => { this.clearTimer(); this.setState({ exIdx: 0, sets: freshSets(EXERCISES[0]), cur: 0, rest: null, history: [], finished: false }); },
+      resting: st.rest != null,
+      restText: st.rest != null ? fmtTime(st.rest) : '0:00',
+      restPct: st.rest != null ? Math.round((st.rest / st.restTotal) * 100) : 0,
+      nextText,
+      addRest: () => this.setState({ rest: (st.rest || 0) + 30, restTotal: st.restTotal + 30 }),
+      skipRest: () => { this.clearTimer(); this.setState({ rest: null }); },
+      durationText: '48 min',
+      sumSets: String(sumSets),
+      sumVolume: (Math.round(volume / 100) / 10) + ' t',
+      sumPRs: String(allHist.filter((h) => h.name === 'Bench press' && h.sets.some((s) => s.weight >= 62.5 && s.reps >= 8)).length),
+      summaryRows
+    };
+  }
+}
+</script>
+</body>
+</html>
