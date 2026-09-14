@@ -45,4 +45,11 @@ class RoutineRepository(private val db: AppDatabase) {
     }
 
     suspend fun update(routine: Routine) = dao.updateRoutine(routine)
+
+    /** Saves a routine as a template (never active). @param slotGroupIds one entry per slot; null is a rest slot. */
+    suspend fun createTemplate(name: String, slotGroupIds: List<Long?>): Long = db.withTransaction {
+        val id = dao.insertRoutine(Routine(name = name, isActive = false, isTemplate = true))
+        dao.insertSlots(slotGroupIds.mapIndexed { i, g -> RoutineSlot(routineId = id, position = i, groupId = g) })
+        id
+    }
 }
