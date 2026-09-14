@@ -76,4 +76,7 @@ interface GroupDao {
 
     @Query("SELECT * FROM set_prescriptions WHERE groupExerciseId = :groupExerciseId ORDER BY position")
     suspend fun prescriptionsFor(groupExerciseId: Long): List<SetPrescription>
+
+    @Query("SELECT COUNT(*) FROM routine_slots WHERE groupId = :groupId")
+    suspend fun routineUsageCount(groupId: Long): Int
 }

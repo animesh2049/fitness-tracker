@@ -91,4 +91,7 @@ class GroupRepository(private val db: AppDatabase) {
 
     suspend fun saveAsTemplate(groupId: Long, name: String): Long = duplicateGroup(groupId, name, asTemplate = true)
     suspend fun createFromTemplate(templateId: Long, name: String): Long = duplicateGroup(templateId, name, asTemplate = false)
+
+    /** Number of routine slots that reference this group (those slots become rest days when it is deleted). */
+    suspend fun routineUsageCount(groupId: Long): Int = dao.routineUsageCount(groupId)
 }
