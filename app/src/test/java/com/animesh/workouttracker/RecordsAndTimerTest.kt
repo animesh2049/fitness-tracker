@@ -40,6 +40,11 @@ class RecordsAndTimerTest {
         assertTrue(Records.beats(history, set(4, 8, 60.0)).isEmpty())
         assertTrue(Records.beats(history, set(4, 9, 60.0)).contains(RecordKind.MOST_REPS_AT_WEIGHT))
         assertTrue(Records.beats(history, set(4, 8, 40.0).copy(isWarmup = true)).isEmpty())
+        // A lighter set for fewer reps is dominated by 60 x 8 and is not a record.
+        assertTrue(Records.beats(history, set(4, 5, 50.0)).isEmpty())
+        // First ever sets are a baseline, never a record.
+        assertTrue(Records.beats(emptyList(), set(1, 8, 60.0)).isEmpty())
+        assertTrue(Records.beats(emptyList(), LoggedSet(epochDay = 1, targetSeconds = 45, actualSeconds = 45)).isEmpty())
     }
 
     @Test
