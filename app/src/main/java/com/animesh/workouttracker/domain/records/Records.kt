@@ -68,6 +68,9 @@ object Records {
      */
     fun beats(history: List<LoggedSet>, candidate: LoggedSet): List<RecordKind> {
         if (candidate.isWarmup || !candidate.completed) return emptyList()
+        val prior = working(history)
+        // The very first logged sets of an exercise are a baseline, not a record.
+        if (prior.isEmpty()) return emptyList()
         val out = mutableListOf<RecordKind>()
         val secs = candidate.actualSeconds
         if (secs != null && secs > 0) {
@@ -78,12 +81,13 @@ object Records {
         val w = candidate.actualWeightKg ?: return out
         val r = candidate.actualReps ?: return out
         if (w <= 0 || r <= 0) return out
-        val prevAtReps = heaviestForReps(history)[r]?.actualWeightKg ?: 0.0
-        if (w > prevAtReps + 1e-9) out += RecordKind.HEAVIEST_FOR_REPS
-        val prevRepsAtWeight = working(history).filter { it.actualWeightKg == w }.maxOfOrNull { it.actualReps ?: 0 } ?: 0
+        // Heaviest for reps: beats every earlier set done for at least as many reps (a rep max).
+        val prevAtLeastReps = prior.filter { (it.actualReps ?: 0) >= r }.maxOfOrNull { it.actualWeightKg ?: 0.0 } ?: 0.0
+        if (w > prevAtLeastReps + 1e-9) out += RecordKind.HEAVIEST_FOR_REPS
+        val prevRepsAtWeight = prior.filter { (it.actualWeightKg ?: 0.0) >= w - 1e-9 }.maxOfOrNull { it.actualReps ?: 0 } ?: 0
         if (r > prevRepsAtWeight && prevRepsAtWeight > 0) out += RecordKind.MOST_REPS_AT_WEIGHT
         val prevE1 = bestE1rm(history)?.let { epley(it.actualWeightKg!!, it.actualReps!!) } ?: 0.0
-        if (epley(w, r) > prevE1 + 1e-9 && history.isNotEmpty()) out += RecordKind.BEST_E1RM
+        if (epley(w, r) > prevE1 + 1e-9) out += RecordKind.BEST_E1RM
         return out
     }
 
