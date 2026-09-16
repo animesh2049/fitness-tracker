@@ -1,4 +1,4 @@
-# Workout Tracker
+# Fitness Tracker
 
 An offline Android app for planning, running and tracking a strength and mobility routine. Everything lives on the device in SQLite. There is no account, no sync and no network permission.
 
@@ -39,7 +39,7 @@ JAVA_HOME=... ./gradlew connectedDebugAndroidTest  # Room DAO tests, needs an em
 
 - `REQUIREMENTS.md` the full requirements the app is built against.
 - `design/` the clickable screen designs (Design Component sources plus `workout-tracker-screens.html`, which opens in any browser).
-- `app/src/main/java/com/animesh/workouttracker/`
+- `app/src/main/java/com/animesh/fitnesstracker/`
   - `data/` Room entities, DAOs, database, seed data
   - `domain/` pure Kotlin engines: progression, cycle, records, timer, session planning
   - `repository/` coordination over the DAOs

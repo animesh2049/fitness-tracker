@@ -1,4 +1,4 @@
-# Workout Tracker: Requirements
+# Fitness Tracker: Requirements
 
 ## 1. Overview
 
