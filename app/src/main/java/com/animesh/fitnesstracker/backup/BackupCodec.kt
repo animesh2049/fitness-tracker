@@ -3,8 +3,14 @@ package com.animesh.fitnesstracker.backup
 import androidx.room.withTransaction
 import com.animesh.fitnesstracker.data.AppDatabase
 import com.animesh.fitnesstracker.data.model.DayLog
+import com.animesh.fitnesstracker.data.model.DietPlan
+import com.animesh.fitnesstracker.data.model.DietPlanCell
+import com.animesh.fitnesstracker.data.model.DietSettings
 import com.animesh.fitnesstracker.data.model.Exercise
 import com.animesh.fitnesstracker.data.model.GroupExercise
+import com.animesh.fitnesstracker.data.model.Ingredient
+import com.animesh.fitnesstracker.data.model.Meal
+import com.animesh.fitnesstracker.data.model.MealStep
 import com.animesh.fitnesstracker.data.model.Routine
 import com.animesh.fitnesstracker.data.model.RoutineSlot
 import com.animesh.fitnesstracker.data.model.Session
@@ -20,7 +26,7 @@ import kotlinx.serialization.json.Json
 /** Everything in the database, in one file. Ids are kept so relations survive a round trip. */
 @Serializable
 data class BackupFile(
-    val schemaVersion: Int = 1,
+    val schemaVersion: Int = BackupCodec.SCHEMA_VERSION,
     val exportedAt: Long,
     val appVersion: String,
     val exercises: List<Exercise> = emptyList(),
@@ -33,13 +39,22 @@ data class BackupFile(
     val sessionExercises: List<SessionExercise> = emptyList(),
     val sessionSets: List<SessionSet> = emptyList(),
     val dayLogs: List<DayLog> = emptyList(),
-    val settings: Settings? = null
+    val settings: Settings? = null,
+    // Schema version 2 (diet planner). Defaults keep version 1 files decodable.
+    val meals: List<Meal> = emptyList(),
+    val ingredients: List<Ingredient> = emptyList(),
+    val mealSteps: List<MealStep> = emptyList(),
+    val dietPlans: List<DietPlan> = emptyList(),
+    val dietPlanCells: List<DietPlanCell> = emptyList(),
+    val dietSettings: DietSettings? = null
 ) {
-    /** Total number of rows across all tables (settings counts as one). */
+    /** Total number of rows across all tables (each settings row counts as one). */
     val rowCount: Int
         get() = exercises.size + groups.size + groupExercises.size + setPrescriptions.size +
             routines.size + routineSlots.size + sessions.size + sessionExercises.size +
-            sessionSets.size + dayLogs.size + (if (settings != null) 1 else 0)
+            sessionSets.size + dayLogs.size + (if (settings != null) 1 else 0) +
+            meals.size + ingredients.size + mealSteps.size + dietPlans.size + dietPlanCells.size +
+            (if (dietSettings != null) 1 else 0)
 }
 
 enum class ImportMode { REPLACE, MERGE }
@@ -52,7 +67,7 @@ data class ImportResult(val mode: ImportMode, val counts: Map<String, Int>) {
 class BackupFormatException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 object BackupCodec {
-    const val SCHEMA_VERSION = 1
+    const val SCHEMA_VERSION = 2
 
     val json: Json = Json {
         prettyPrint = true
@@ -92,7 +107,13 @@ object BackupCodec {
         sessionExercises = db.sessionDao().getAllSessionExercises(),
         sessionSets = db.sessionDao().getAllSessionSets(),
         dayLogs = db.sessionDao().getAllDayLogs(),
-        settings = db.settingsDao().get()
+        settings = db.settingsDao().get(),
+        meals = db.mealDao().getAllMeals(),
+        ingredients = db.mealDao().getAllIngredients(),
+        mealSteps = db.mealDao().getAllSteps(),
+        dietPlans = db.dietPlanDao().getAllPlans(),
+        dietPlanCells = db.dietPlanDao().getAllCells(),
+        dietSettings = db.dietSettingsDao().get()
     )
 
     /** Pretty JSON of the whole database. */
@@ -112,7 +133,14 @@ object BackupCodec {
         val routineDao = db.routineDao()
         val groupDao = db.groupDao()
         val exerciseDao = db.exerciseDao()
+        val mealDao = db.mealDao()
+        val planDao = db.dietPlanDao()
 
+        planDao.deleteAllCells()
+        planDao.deleteAllPlans()
+        mealDao.deleteAllSteps()
+        mealDao.deleteAllIngredients()
+        mealDao.deleteAllMeals()
         sessionDao.deleteAllSets()
         sessionDao.deleteAllSessionExercises()
         sessionDao.deleteAllSessions()
@@ -141,6 +169,18 @@ object BackupCodec {
             counts["settings"] = 1
         } else {
             counts["settings"] = 0
+        }
+        counts["meals"] = mealDao.insertMealsReplace(file.meals).size
+        counts["ingredients"] = mealDao.insertIngredientsReplace(file.ingredients).size
+        counts["mealSteps"] = mealDao.insertStepsReplace(file.mealSteps).size
+        counts["dietPlans"] = planDao.insertPlansReplace(file.dietPlans).size
+        counts["dietPlanCells"] = planDao.insertCellsReplace(file.dietPlanCells).size
+        val dietSettings = file.dietSettings
+        if (dietSettings != null) {
+            db.dietSettingsDao().upsert(dietSettings.copy(id = 1, seeded = true))
+            counts["dietSettings"] = 1
+        } else {
+            counts["dietSettings"] = 0
         }
         ImportResult(ImportMode.REPLACE, counts)
     }
@@ -188,6 +228,43 @@ object BackupCodec {
         counts["dayLogs"] = sessionDao.insertDayLogsIgnore(file.dayLogs).count { it != -1L }
         val settings = file.settings
         counts["settings"] = if (settings != null && db.settingsDao().insertIgnore(settings.copy(id = 1, seeded = true)) != -1L) 1 else 0
+
+        // Meals follow the exercise rule: match by id, then by name; redirect references to the match.
+        // A matched meal keeps the recipe it already has, so its ingredients and steps in the file are skipped.
+        val mealDao = db.mealDao()
+        val planDao = db.dietPlanDao()
+        val existingMeals = mealDao.getAllMeals()
+        val mealById = existingMeals.associateBy { it.id }
+        val mealByName = existingMeals.associateBy { it.name.trim().lowercase() }
+        val mealIdMap = HashMap<Long, Long>()
+        val mealsToInsert = ArrayList<Meal>()
+        for (m in file.meals) {
+            val sameName = mealByName[m.name.trim().lowercase()]
+            when {
+                mealById.containsKey(m.id) -> mealIdMap[m.id] = m.id
+                sameName != null -> mealIdMap[m.id] = sameName.id
+                else -> { mealIdMap[m.id] = m.id; mealsToInsert += m }
+            }
+        }
+        val insertedMealIds = mealDao.insertMealsIgnore(mealsToInsert).filter { it != -1L }.toSet()
+        counts["meals"] = insertedMealIds.size
+        fun mapMeal(id: Long): Long = mealIdMap[id] ?: id
+        counts["ingredients"] = mealDao.insertIngredientsIgnore(
+            file.ingredients.filter { mapMeal(it.mealId) in insertedMealIds }.map { it.copy(mealId = mapMeal(it.mealId)) }
+        ).count { it != -1L }
+        counts["mealSteps"] = mealDao.insertStepsIgnore(
+            file.mealSteps.filter { mapMeal(it.mealId) in insertedMealIds }.map { it.copy(mealId = mapMeal(it.mealId)) }
+        ).count { it != -1L }
+        // Keep a single active plan: when one is active already, imported plans come in inactive.
+        val hasActivePlan = planDao.getActive() != null
+        counts["dietPlans"] = planDao.insertPlansIgnore(
+            if (hasActivePlan) file.dietPlans.map { it.copy(isActive = false) } else file.dietPlans
+        ).count { it != -1L }
+        counts["dietPlanCells"] = planDao.insertCellsIgnore(
+            file.dietPlanCells.map { c -> c.copy(mealId = c.mealId?.let(::mapMeal)) }
+        ).count { it != -1L }
+        val dietSettings = file.dietSettings
+        counts["dietSettings"] = if (dietSettings != null && db.dietSettingsDao().insertIgnore(dietSettings.copy(id = 1, seeded = true)) != -1L) 1 else 0
         ImportResult(ImportMode.MERGE, counts)
     }
 }
