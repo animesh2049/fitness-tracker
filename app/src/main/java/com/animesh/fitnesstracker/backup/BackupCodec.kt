@@ -136,11 +136,16 @@ object BackupCodec {
         val mealDao = db.mealDao()
         val planDao = db.dietPlanDao()
 
-        planDao.deleteAllCells()
-        planDao.deleteAllPlans()
-        mealDao.deleteAllSteps()
-        mealDao.deleteAllIngredients()
-        mealDao.deleteAllMeals()
+        // A version 1 backup predates the diet planner and says nothing about it, so the diet
+        // tables are left untouched when restoring one; only version 2 files replace them.
+        val replacesDiet = file.schemaVersion >= 2
+        if (replacesDiet) {
+            planDao.deleteAllCells()
+            planDao.deleteAllPlans()
+            mealDao.deleteAllSteps()
+            mealDao.deleteAllIngredients()
+            mealDao.deleteAllMeals()
+        }
         sessionDao.deleteAllSets()
         sessionDao.deleteAllSessionExercises()
         sessionDao.deleteAllSessions()
@@ -170,13 +175,13 @@ object BackupCodec {
         } else {
             counts["settings"] = 0
         }
-        counts["meals"] = mealDao.insertMealsReplace(file.meals).size
-        counts["ingredients"] = mealDao.insertIngredientsReplace(file.ingredients).size
-        counts["mealSteps"] = mealDao.insertStepsReplace(file.mealSteps).size
-        counts["dietPlans"] = planDao.insertPlansReplace(file.dietPlans).size
-        counts["dietPlanCells"] = planDao.insertCellsReplace(file.dietPlanCells).size
+        counts["meals"] = if (replacesDiet) mealDao.insertMealsReplace(file.meals).size else 0
+        counts["ingredients"] = if (replacesDiet) mealDao.insertIngredientsReplace(file.ingredients).size else 0
+        counts["mealSteps"] = if (replacesDiet) mealDao.insertStepsReplace(file.mealSteps).size else 0
+        counts["dietPlans"] = if (replacesDiet) planDao.insertPlansReplace(file.dietPlans).size else 0
+        counts["dietPlanCells"] = if (replacesDiet) planDao.insertCellsReplace(file.dietPlanCells).size else 0
         val dietSettings = file.dietSettings
-        if (dietSettings != null) {
+        if (replacesDiet && dietSettings != null) {
             db.dietSettingsDao().upsert(dietSettings.copy(id = 1, seeded = true))
             counts["dietSettings"] = 1
         } else {
