@@ -35,7 +35,11 @@ fun NavGraphBuilder.dietGraph(navController: NavHostController) {
         )
     }
     composable(DietRoutes.MEALS) {
-        Placeholder("Meals")
+        MealsScreen(
+            onOpenMeal = { navController.navigate(DietRoutes.meal(it)) },
+            onEditMeal = { navController.navigate(DietRoutes.mealEdit(it)) },
+            onBack = { navController.popBackStack() }
+        )
     }
     composable(DietRoutes.MEAL, arguments = listOf(navArgument("mealId") { type = NavType.LongType })) { entry ->
         val id = entry.arguments?.getLong("mealId") ?: return@composable
@@ -48,10 +52,14 @@ fun NavGraphBuilder.dietGraph(navController: NavHostController) {
     }
     composable(DietRoutes.MEAL_EDIT, arguments = listOf(navArgument("mealId") { type = NavType.LongType })) { entry ->
         val id = entry.arguments?.getLong("mealId") ?: 0L
-        Placeholder("Edit meal $id")
+        MealEditorScreen(mealId = id, onClose = { navController.popBackStack() })
     }
     composable(DietRoutes.WEEK) {
-        Placeholder("Week plan")
+        WeekPlanScreen(
+            onOpenMeals = { navController.navigate(DietRoutes.MEALS) },
+            onOpenReminders = { navController.navigate(DietRoutes.REMINDERS) },
+            onOpenMeal = { navController.navigate(DietRoutes.meal(it)) }
+        )
     }
     composable(DietRoutes.REMINDERS) {
         DietRemindersScreen(onBack = { navController.popBackStack() })
