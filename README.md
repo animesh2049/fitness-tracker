@@ -1,6 +1,6 @@
 # Fitness Tracker
 
-An offline Android app for planning, running and tracking a strength and mobility routine. Everything lives on the device in SQLite. There is no account, no sync and no network permission.
+An offline Android app for planning, running and tracking a strength routine, and for planning what to eat. Everything lives on the device in SQLite. There is no account, no sync and no network permission.
 
 What it does:
 
@@ -10,6 +10,7 @@ What it does:
 - A session runner with set logging, rest timers that keep running with the screen off, timed sets with a get-ready countdown, supersets and personal record detection.
 - History calendar, per-exercise progress charts and records.
 - JSON backup and restore, CSV export.
+- A Diet tab: meals with ingredients, quantities and cooking steps; a weekly plan of three meals a day; a time-of-day view of what to eat now; a prep reminder the evening before a meal that needs soaking or other preparation, and an optional reminder when each meal window opens. Reminders are local alarms with a ten minute window; the only extra permission is receiving the boot broadcast so alarms survive a restart.
 
 ## Building
 
@@ -38,15 +39,19 @@ JAVA_HOME=... ./gradlew connectedDebugAndroidTest  # Room DAO tests, needs an em
 ## Layout
 
 - `REQUIREMENTS.md` the full requirements the app is built against.
-- `design/` the clickable screen designs (Design Component sources plus `workout-tracker-screens.html`, which opens in any browser).
+- `design/` the clickable screen designs (Design Component sources plus `workout-tracker-screens.html`, which opens in any browser); `design/diet/` holds the diet planner screens.
 - `app/src/main/java/com/animesh/fitnesstracker/`
   - `data/` Room entities, DAOs, database, seed data
-  - `domain/` pure Kotlin engines: progression, cycle, records, timer, session planning
+  - `domain/` pure Kotlin engines: progression, cycle, records, timer, session planning, and `diet/` (meal clock, window rules, scaling, day menu, prep planner)
   - `repository/` coordination over the DAOs
-  - `service/` the foreground timer service and its controller
-  - `ui/` Compose screens, one package per tab, plus `theme/` and `components/`
+  - `service/` the foreground timer service and its controller, plus the diet reminder scheduler and receivers
+  - `ui/` Compose screens, one package per tab (including `diet/`), plus `theme/` and `components/`
   - `backup/` JSON and CSV export and import
 
 ## Fonts
 
 IBM Plex Sans and IBM Plex Mono, bundled under the SIL Open Font License (see `FONT_LICENSE_OFL.txt`).
+
+## Upgrading from Workout Tracker 0.1
+
+Version 0.2 renamed the package, so it installs as a separate app. Export a JSON backup from the old app, install this one, import the backup with "Replace everything", then uninstall the old app. A version 1 backup restores the workout data and leaves the starter meals in place.
