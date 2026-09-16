@@ -206,4 +206,3 @@ private fun MealRowCard(row: DietMealRow, vm: DietTodayViewModel) {
     }
 }
 
-private fun slotLabel(slot: MealSlot): String = slot.name.lowercase().replaceFirstChar { it.uppercase() }

@@ -211,4 +211,3 @@ private fun MacroTile(label: String, value: String?, modifier: Modifier, valueCo
     )
 }
 
-private fun slotLabel(slot: MealSlot): String = slot.name.lowercase().replaceFirstChar { it.uppercase() }
