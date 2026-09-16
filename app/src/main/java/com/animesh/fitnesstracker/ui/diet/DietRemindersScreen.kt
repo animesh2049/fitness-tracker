@@ -288,4 +288,3 @@ private fun Divider() = Box(Modifier.fillMaxWidth().height(1.dp).background(Toke
 private fun Note(text: String) =
     Text(text, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = Tokens.Dim, modifier = Modifier.padding(horizontal = 4.dp))
 
-private fun slotLabel(slot: MealSlot): String = slot.name.lowercase().replaceFirstChar { it.uppercase() }
