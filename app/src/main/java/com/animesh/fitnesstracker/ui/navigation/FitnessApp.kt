@@ -137,9 +137,11 @@ private fun NavHostController.openDeepRoute(route: String) {
 private fun BottomBar(navController: NavHostController, activeRoutes: Set<String>) {
     NavigationBar(containerColor = Tokens.Ground, tonalElevation = 0.dp) {
         TopLevel.entries.forEach { top ->
+            val selected = activeRoutes.any { it == top.route || it.startsWith(top.route + "/") }
             NavigationBarItem(
-                selected = activeRoutes.any { it == top.route || it.startsWith(top.route + "/") },
-                onClick = { navController.navigateTop(top) },
+                selected = selected,
+                // Tapping the tab you are already in returns to its top screen.
+                onClick = { if (selected) navController.popBackStack(top.route, inclusive = false) else navController.navigateTop(top) },
                 icon = { Icon(top.icon, contentDescription = null) },
                 label = { Text(stringResource(top.labelRes), style = MaterialTheme.typography.labelSmall) },
                 colors = NavigationBarItemDefaults.colors(

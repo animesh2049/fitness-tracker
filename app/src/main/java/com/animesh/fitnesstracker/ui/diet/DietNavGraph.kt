@@ -56,6 +56,7 @@ fun NavGraphBuilder.dietGraph(navController: NavHostController) {
     }
     composable(DietRoutes.WEEK) {
         WeekPlanScreen(
+            onBack = { navController.popBackStack(DietRoutes.HUB, inclusive = false) },
             onOpenMeals = { navController.navigate(DietRoutes.MEALS) },
             onOpenReminders = { navController.navigate(DietRoutes.REMINDERS) },
             onOpenMeal = { navController.navigate(DietRoutes.meal(it)) }
