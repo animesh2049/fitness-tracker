@@ -17,3 +17,6 @@ object Muscles {
         "legs", "glutes", "core", "mobility", "cardio", "other"
     )
 }
+
+/** The three meals a day the diet planner schedules. Stored by name. */
+enum class MealSlot { BREAKFAST, LUNCH, DINNER }
