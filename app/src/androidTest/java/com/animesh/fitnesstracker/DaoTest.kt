@@ -1,6 +1,7 @@
 package com.animesh.fitnesstracker
 
 import androidx.room.Room
+import com.animesh.fitnesstracker.data.model.WeightUnit
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.animesh.fitnesstracker.backup.BackupCodec
@@ -264,5 +265,21 @@ class DaoTest {
         }
         assertEquals(7, db.mealDao().count())
         assertEquals(20, dietPlans.getActive()!!.cells.size)
+    }
+
+    @Test
+    fun replacingWithVersionOneBackupKeepsDietData() = runTest {
+        Seed.runIfNeeded(db)
+        val before = db.mealDao().count()
+        assertTrue(before >= 7)
+        // A version 1 file: workout tables only, no diet keys at all.
+        val v1 = """{"schemaVersion":1,"exportedAt":1,"appVersion":"0.1.1","exercises":[{"id":1,"name":"Only exercise","type":"WEIGHT"}],"settings":{"id":1,"unit":"LB"}}"""
+        val result = BackupCodec.import(db, v1, ImportMode.REPLACE)
+        assertEquals(1, result.counts["exercises"])
+        assertEquals(0, result.counts["meals"])
+        assertEquals(before, db.mealDao().count())
+        assertNotNull(db.dietPlanDao().getActive())
+        assertEquals("Only exercise", db.exerciseDao().getAll().single().name)
+        assertEquals(WeightUnit.LB, db.settingsDao().get()!!.unit)
     }
 }
