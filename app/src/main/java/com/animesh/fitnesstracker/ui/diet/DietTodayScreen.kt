@@ -96,7 +96,6 @@ fun DietTodayScreen(onOpenMeal: (Long) -> Unit, onOpenWeek: () -> Unit, onOpenMe
                 }
                 item("links") {
                     Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SecondaryButton("Week plan", onOpenWeek, Modifier.weight(1f))
                         SecondaryButton("Meals", onOpenMeals, Modifier.weight(1f))
                         SecondaryButton("Reminders", onOpenReminders, Modifier.weight(1f))
                     }
