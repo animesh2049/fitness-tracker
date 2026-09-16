@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 28px 20px 12px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Diet · Week plan</div>
+    <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">Cutting week</div>
+    <div style="font-size: 14px; color: #8b9096;">Active · repeats every week · 3 meals a day</div>
+  </div>
+
+  <sc-if value="{{picking}}" hint-placeholder-val="{{ false }}">
+    <div style="flex-grow: 1; padding: 4px 16px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 13px; color: #8b9096; padding: 4px 4px 0;">{{pickTitle}}</div>
+      <sc-for list="{{options}}" as="o" hint-placeholder-count="3">
+        <button onClick="{{o.pick}}" style="display: flex; justify-content: space-between; align-items: center; text-align: left; background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 16px; color: #ecedee; min-height: 56px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-size: 16px; font-weight: 500;">{{o.name}}</div>
+            <div class="mono" style="font-size: 13px; color: #8b9096;">{{o.macros}}</div>
+          </div>
+          <sc-if value="{{o.prep}}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #f5b400; border: 1px solid #4a3d0c; border-radius: 6px; padding: 4px 7px;">Prep</div>
+          </sc-if>
+        </button>
+      </sc-for>
+      <button onClick="{{clearSlot}}" style="height: 48px; border-radius: 12px; background: transparent; color: #b4b8bd; border: 1px dashed #3a3f46; font-size: 14px;">Leave empty</button>
+    </div>
+    <div style="padding: 12px 16px; flex-shrink: 0; border-top: 1px solid #1f2226;">
+      <button onClick="{{cancelPick}}" style="width: 100%; height: 48px; border-radius: 12px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 15px; font-weight: 500;">Cancel</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{browsing}}" hint-placeholder-val="{{ true }}">
+    <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: grid; grid-template-columns: 44px repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 0 2px;">
+        <div></div>
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096; text-align: center;">Breakfast</div>
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096; text-align: center;">Lunch</div>
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096; text-align: center;">Dinner</div>
+      </div>
+      <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+        <div style="display: grid; grid-template-columns: 44px repeat(3, minmax(0, 1fr)); gap: 6px; align-items: stretch;">
+          <div style="display: flex; flex-direction: column; justify-content: center; gap: 2px;">
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: {{d.dayColor}};">{{d.day}}</div>
+            <div class="mono" style="font-size: 10px; color: #6b7076;">{{d.protein}}</div>
+          </div>
+          <sc-for list="{{d.cells}}" as="c" hint-placeholder-count="3">
+            <button onClick="{{c.open}}" style="{{c.style}}">
+              <div style="font-size: 12px; font-weight: 500; line-height: 1.25; text-align: left; color: {{c.textColor}};">{{c.name}}</div>
+              <sc-if value="{{c.prep}}" hint-placeholder-val="{{ false }}">
+                <div style="width: 6px; height: 6px; border-radius: 3px; background: #f5b400; position: absolute; top: 8px; right: 8px;"></div>
+              </sc-if>
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+      <div style="font-size: 12px; color: #6b7076; padding: 4px 4px 0;">Tap a cell to change it. Amber dot means the meal needs prep the evening before. Today is highlighted.</div>
+    </div>
+    <div style="padding: 12px 16px; display: flex; gap: 8px; flex-shrink: 0; border-top: 1px solid #1f2226;">
+      <button style="flex: 1 1 0; height: 48px; border-radius: 10px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 14px; font-weight: 500;">Meals</button>
+      <button style="flex: 1 1 0; height: 48px; border-radius: 10px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 14px; font-weight: 500;">Copy Mon to all</button>
+      <button style="flex: 1 1 0; height: 48px; border-radius: 10px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 14px; font-weight: 500;">Reminders</button>
+    </div>
+  </sc-if>
+
+  <div style="height: 72px; border-top: 1px solid #1f2226; background: #0e0f11; display: flex; align-items: stretch; flex-shrink: 0;">
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Today</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #c8f03c;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16a8 8 0 0 1-16 0z"></path><path d="M9 3v4M12 2v5M15 3v4"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Diet</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">History</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Progress</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Plan</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const MEALS = {
+  chilla: { name: 'Moong dal chilla', slot: 'Breakfast', macros: '450 kcal · 35 g', protein: 35, prep: true },
+  oats:   { name: 'Oats, whey, peanut butter', slot: 'Breakfast', macros: '430 kcal · 36 g', protein: 36, prep: false },
+  dal:    { name: 'Dal, sabzi, roti', slot: 'Lunch', macros: '600 kcal · 26 g', protein: 26, prep: false },
+  rajma:  { name: 'Rajma chawal', slot: 'Lunch', macros: '560 kcal · 20 g', protein: 20, prep: true },
+  chole:  { name: 'Chole, brown rice', slot: 'Lunch', macros: '580 kcal · 22 g', protein: 22, prep: true },
+  paneer: { name: 'Paneer bhurji, roti', slot: 'Dinner', macros: '550 kcal · 33 g', protein: 33, prep: false },
+  soya:   { name: 'Soya curry, roti', slot: 'Dinner', macros: '520 kcal · 38 g', protein: 38, prep: false }
+};
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const SLOTS = ['Breakfast', 'Lunch', 'Dinner'];
+const TODAY = 1;
+function initial() {
+  return [
+    ['oats', 'dal', 'soya'], ['chilla', 'dal', 'paneer'], ['chilla', 'rajma', 'paneer'], ['oats', 'dal', 'soya'],
+    ['chilla', 'chole', 'paneer'], ['oats', 'dal', 'soya'], ['chilla', null, 'paneer']
+  ];
+}
+class Component extends DCLogic {
+  state = { plan: initial(), pick: null };
+  setCell(id) {
+    const p = this.state.pick; const plan = this.state.plan.map((r) => r.slice());
+    plan[p.day][p.slot] = id; this.setState({ plan, pick: null });
+  }
+  renderVals() {
+    const s = this.state;
+    const days = DAYS.map((day, di) => {
+      const row = s.plan[di];
+      const protein = row.reduce((a, id) => a + (id ? MEALS[id].protein : 0), 0);
+      return {
+        day, dayColor: di === TODAY ? '#c8f03c' : '#8b9096', protein: protein + ' g',
+        cells: row.map((id, si) => {
+          const m = id ? MEALS[id] : null;
+          const base = 'position: relative; min-height: 56px; border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; ';
+          const border = di === TODAY ? '#33421a' : '#24272c';
+          return {
+            name: m ? m.name : 'Empty', prep: m ? m.prep : false,
+            textColor: m ? '#ecedee' : '#6b7076',
+            style: base + (m ? 'background: #17191c; border: 1px solid ' + border + ';' : 'background: transparent; border: 1px dashed #3a3f46;'),
+            open: () => this.setState({ pick: { day: di, slot: si } })
+          };
+        })
+      };
+    });
+    const p = s.pick;
+    const options = p ? Object.keys(MEALS).filter((k) => MEALS[k].slot === SLOTS[p.slot]).map((k) => Object.assign({}, MEALS[k], { pick: () => this.setCell(k) })) : [];
+    return {
+      picking: !!p, browsing: !p, days,
+      pickTitle: p ? 'Pick ' + SLOTS[p.slot].toLowerCase() + ' for ' + DAYS[p.day] + '. Only meals tagged ' + SLOTS[p.slot].toLowerCase() + ' are listed.' : '',
+      options,
+      clearSlot: () => this.setCell(null),
+      cancelPick: () => this.setState({ pick: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

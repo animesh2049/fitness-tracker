@@ -269,3 +269,37 @@ The following are desirable but explicitly deferred:
 - Framework choice for the native app (Kotlin with Jetpack Compose, or a cross-platform toolkit such as Flutter or React Native). Affects effort and the iOS option.
 - Whether swap should move the cycle pointer past the swapped slot by default.
 - Whether to support plate-based weight entry (bar plus plates) or only total weight.
+
+## 14. Diet planner (version 2, designed 2026-09-15)
+
+Design canvas: `design/diet/` (six clickable artboards) and https://claude.ai/artifact/VojP6qYXbnWaqDWEmiQjPJ
+
+### 14.1 Purpose
+
+Show the user what to eat at each of three meals a day, hold the recipe for every meal, and remind them the evening before when a meal needs preparation. Same offline constraints as the rest of the app: local data, local notifications, no network.
+
+### 14.2 Domain model
+
+**Meal** (a recipe). Name (required, unique). Slot tags (multi-select: breakfast, lunch, dinner). Servings the recipe describes (default 1). Cook time in minutes (optional). Per-serving calories, protein, carbs, fat (all optional). Ordered ingredients, each with a name, an amount per serving, and a unit (free text: g, ml, cup, katori, tsp, piece). Ordered procedure steps (free text). Needs prep the day before (boolean) plus a prep instruction (text). Notes. Archived flag. Deleting a meal used in the week plan empties those slots after confirmation.
+
+**Week plan.** Seven days by three slots (breakfast, lunch, dinner). Each cell holds a meal and a serving multiplier (default 1) or is empty. The plan repeats every calendar week. One plan is active; others can be saved as templates. "Copy a day to all days" fills the week from one day.
+
+**Meal windows** (settings). Start and end time for each slot; defaults breakfast 06:00 to 10:30, lunch 11:30 to 15:30, dinner 18:30 to 22:00. Windows must not overlap.
+
+**Reminder settings.** Prep reminder on/off and time (default 21:00). Meal window reminder on/off.
+
+### 14.3 Functional requirements
+
+- FR38. Create, edit, delete and archive meals with the fields in 14.2. Ingredient and step lists support add, remove and reorder. Deleting a meal that the week plan uses warns how many slots become empty and asks for confirmation.
+- FR39. Meal detail shows slot tags, cook time, macros, ingredients, the day-before instruction if any, and the numbered procedure. A servings stepper scales every ingredient amount and the macros; the stored recipe is not changed.
+- FR40. Week plan screen: a 7 by 3 grid. Tapping a cell opens a picker listing only meals tagged for that slot, plus "leave empty". Cells of prep-ahead meals carry a marker. Each day shows its protein total (and calories where every meal has macros).
+- FR41. Diet tab (new fifth bottom tab, placed after Today): shows today's plan. The meal whose window contains the current time is the current meal, shown large with quantity, macros and a button to its recipe. Meals before it are marked done, later ones later. Between windows the tab shows the next meal and its start time; after the last window it shows tomorrow's breakfast. Tapping any meal row expands its ingredient quantities.
+- FR42. Prep reminder: on each day, at the prep reminder time, if any meal planned for the next calendar day needs prep the day before, post one local notification listing each such meal and its prep instruction, with actions "Done" and "Open recipe". No notification when nothing needs prep. The same information appears as a banner on the Diet tab from the prep reminder time until midnight.
+- FR43. Meal window reminder (optional): when a window opens, post a local notification naming the planned meal, its quantity and macros. Tapping it opens the Diet tab.
+- FR44. Meals, the week plan and the diet settings are included in JSON export and import (schema version bump with migration).
+
+### 14.4 Non-goals for this version
+
+- Logging what was actually eaten, calorie tracking over time, and diet history.
+- Grocery lists (a natural follow-up: sum ingredient amounts across the week).
+- Nutrition lookup from a food database; macros are typed by the user.

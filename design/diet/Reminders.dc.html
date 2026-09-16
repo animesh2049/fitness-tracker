@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 20px 12px 8px 8px; display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+    <button style="width: 44px; height: 44px; border-radius: 10px; background: transparent; border: 0; color: #ecedee; display: flex; align-items: center; justify-content: center;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </button>
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Diet · Reminders</div>
+  </div>
+  <div style="padding: 0 20px 12px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+    <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">Meal times and reminders</div>
+    <div style="font-size: 14px; color: #8b9096;">Times decide which meal the Diet tab shows as current.</div>
+  </div>
+
+  <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 16px;">
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 0 4px;">Meal windows</div>
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 4px 14px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; min-height: 52px; border-bottom: 1px solid #1f2226;">
+          <div style="font-size: 15px;">Breakfast</div>
+          <div class="mono" style="font-size: 15px; color: #ecedee;">06:00 to 10:30</div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; min-height: 52px; border-bottom: 1px solid #1f2226;">
+          <div style="font-size: 15px;">Lunch</div>
+          <div class="mono" style="font-size: 15px; color: #ecedee;">11:30 to 15:30</div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; min-height: 52px;">
+          <div style="font-size: 15px;">Dinner</div>
+          <div class="mono" style="font-size: 15px; color: #ecedee;">18:30 to 22:00</div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: #6b7076; padding: 0 4px;">Between windows the tab shows the next meal and when it starts.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 0 4px;">Notifications</div>
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 4px 14px; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 60px; border-bottom: 1px solid #1f2226;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-size: 15px;">Prep for tomorrow</div>
+            <div style="font-size: 12px; color: #8b9096;">Only on days when a planned meal needs it</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+            <div class="mono" style="font-size: 15px;">21:00</div>
+            <button onClick="{{togglePrep}}" style="width: 60px; height: 44px; border: 0; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center;"><div style="{{prepStyle}}"><div style="{{prepKnob}}"></div></div></button>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 60px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-size: 15px;">At each meal window</div>
+            <div style="font-size: 12px; color: #8b9096;">What to eat, when the window opens</div>
+          </div>
+          <button onClick="{{toggleMeal}}" style="width: 60px; height: 44px; border: 0; background: transparent; padding: 0; display: flex; align-items: center; justify-content: center;"><div style="{{mealStyle}}"><div style="{{mealKnob}}"></div></div></button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 0 4px;">How they look</div>
+      <sc-if value="{{prepOn}}" hint-placeholder-val="{{ true }}">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 18px; height: 18px; border-radius: 4px; background: #c8f03c;"></div>
+            <div style="font-size: 12px; color: #8b9096; flex-grow: 1;">Workout Tracker · Tue 21:00</div>
+          </div>
+          <div style="font-size: 15px; font-weight: 600;">Prep for tomorrow's lunch</div>
+          <div style="font-size: 14px; color: #b4b8bd; line-height: 1.4;">Rajma chawal: soak 1 cup rajma in plenty of water overnight, at least 8 hours.</div>
+          <div style="display: flex; gap: 14px; padding-top: 4px;">
+            <div style="font-size: 13px; font-weight: 600; color: #c8f03c;">Done</div>
+            <div style="font-size: 13px; font-weight: 600; color: #c8f03c;">Open recipe</div>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{mealOn}}" hint-placeholder-val="{{ true }}">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 18px; height: 18px; border-radius: 4px; background: #c8f03c;"></div>
+            <div style="font-size: 12px; color: #8b9096; flex-grow: 1;">Workout Tracker · Wed 11:30</div>
+          </div>
+          <div style="font-size: 15px; font-weight: 600;">Lunch: Rajma chawal</div>
+          <div style="font-size: 14px; color: #b4b8bd; line-height: 1.4;">1 serving · 560 kcal · 20 g protein</div>
+        </div>
+      </sc-if>
+      <sc-if value="{{noneOn}}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 20px 16px; text-align: center; color: #6b7076; font-size: 14px;">Reminders are off. The Diet tab still shows the current meal.</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+function toggle(on) { return 'width: 52px; height: 32px; border-radius: 16px; box-sizing: border-box; padding: 2px; display: flex; align-items: center; justify-content: ' + (on ? 'flex-end' : 'flex-start') + '; background: ' + (on ? '#c8f03c' : '#2c3036') + ';'; }
+function knob(on) { return 'width: 28px; height: 28px; border-radius: 14px; background: ' + (on ? '#101400' : '#8b9096') + ';'; }
+class Component extends DCLogic {
+  state = { prep: true, meal: true };
+  renderVals() {
+    const s = this.state;
+    return {
+      prepOn: s.prep, mealOn: s.meal, noneOn: !s.prep && !s.meal,
+      prepStyle: toggle(s.prep), prepKnob: knob(s.prep), togglePrep: () => this.setState({ prep: !s.prep }),
+      mealStyle: toggle(s.meal), mealKnob: knob(s.meal), toggleMeal: () => this.setState({ meal: !s.meal })
+    };
+  }
+}
+</script>
+</body>
+</html>
