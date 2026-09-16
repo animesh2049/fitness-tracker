@@ -27,14 +27,24 @@ object DietRoutes {
 /** Registers the Diet tab: today's meals, the meal library, meal detail and editor, the week plan and reminder settings. */
 fun NavGraphBuilder.dietGraph(navController: NavHostController) {
     composable(DietRoutes.HUB) {
-        Placeholder("Diet today")
+        DietTodayScreen(
+            onOpenMeal = { navController.navigate(DietRoutes.meal(it)) },
+            onOpenWeek = { navController.navigate(DietRoutes.WEEK) },
+            onOpenMeals = { navController.navigate(DietRoutes.MEALS) },
+            onOpenReminders = { navController.navigate(DietRoutes.REMINDERS) }
+        )
     }
     composable(DietRoutes.MEALS) {
         Placeholder("Meals")
     }
     composable(DietRoutes.MEAL, arguments = listOf(navArgument("mealId") { type = NavType.LongType })) { entry ->
         val id = entry.arguments?.getLong("mealId") ?: return@composable
-        Placeholder("Meal $id")
+        MealScreen(
+            mealId = id,
+            onEdit = { navController.navigate(DietRoutes.mealEdit(it)) },
+            onBack = { navController.popBackStack() },
+            onAddToWeek = { navController.navigate(DietRoutes.WEEK) }
+        )
     }
     composable(DietRoutes.MEAL_EDIT, arguments = listOf(navArgument("mealId") { type = NavType.LongType })) { entry ->
         val id = entry.arguments?.getLong("mealId") ?: 0L
@@ -44,7 +54,7 @@ fun NavGraphBuilder.dietGraph(navController: NavHostController) {
         Placeholder("Week plan")
     }
     composable(DietRoutes.REMINDERS) {
-        Placeholder("Meal times and reminders")
+        DietRemindersScreen(onBack = { navController.popBackStack() })
     }
 }
 
