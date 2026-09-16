@@ -17,6 +17,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +34,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.animesh.fitnesstracker.R
+import com.animesh.fitnesstracker.ui.diet.DietRoutes
 import com.animesh.fitnesstracker.ui.diet.dietGraph
 import com.animesh.fitnesstracker.ui.history.historyGraph
 import com.animesh.fitnesstracker.ui.plan.planGraph
@@ -59,12 +61,23 @@ object Routes {
 /** Routes that take over the whole screen (no bottom bar). */
 private val fullScreenRoutes = setOf(Routes.SESSION, SettingsRoutes.SETTINGS)
 
+/**
+ * @param startRoute a route to open once the graph is ready, from a notification tap: "diet" or
+ * "diet/meal/<id>". Null keeps the normal start destination. [onStartRouteConsumed] is called
+ * after navigating so the same route can be requested again later.
+ */
 @Composable
-fun FitnessApp() {
+fun FitnessApp(startRoute: String? = null, onStartRouteConsumed: () -> Unit = {}) {
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val currentDestination = backStack?.destination
     val showBar = currentDestination?.route !in fullScreenRoutes
+
+    LaunchedEffect(startRoute) {
+        if (startRoute == null) return@LaunchedEffect
+        navController.openDeepRoute(startRoute)
+        onStartRouteConsumed()
+    }
 
     Scaffold(
         containerColor = Tokens.Ground,
@@ -103,6 +116,20 @@ fun NavHostController.navigateTop(top: TopLevel) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
+    }
+}
+
+private const val MEAL_PREFIX = "diet/meal/"
+
+/** Opens a route requested from outside the UI (notification tap). Unknown routes are ignored. */
+private fun NavHostController.openDeepRoute(route: String) {
+    when {
+        route == DietRoutes.HUB -> navigateTop(TopLevel.Diet)
+        route.startsWith(MEAL_PREFIX) -> {
+            val id = route.removePrefix(MEAL_PREFIX).toLongOrNull() ?: return
+            navigateTop(TopLevel.Diet)
+            navigate(DietRoutes.meal(id))
+        }
     }
 }
 
