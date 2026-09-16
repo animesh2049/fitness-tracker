@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.animesh.fitnesstracker.R
+import com.animesh.fitnesstracker.ui.diet.dietGraph
 import com.animesh.fitnesstracker.ui.history.historyGraph
 import com.animesh.fitnesstracker.ui.plan.planGraph
 import com.animesh.fitnesstracker.ui.progress.progressGraph
@@ -43,6 +45,7 @@ import com.animesh.fitnesstracker.ui.today.TodayScreen
 
 enum class TopLevel(val route: String, val labelRes: Int, val icon: ImageVector) {
     Today("today", R.string.nav_today, Icons.Outlined.EventAvailable),
+    Diet("diet", R.string.nav_diet, Icons.Outlined.Restaurant),
     History("history", R.string.nav_history, Icons.Outlined.History),
     Progress("progress", R.string.nav_progress, Icons.Outlined.TrendingUp),
     Plan("plan", R.string.nav_plan, Icons.Outlined.FormatListBulleted)
@@ -86,6 +89,7 @@ fun FitnessApp() {
                 val id = entry.arguments?.getLong("sessionId") ?: return@composable
                 SessionScreen(sessionId = id, onClose = { navController.popBackStack() })
             }
+            dietGraph(navController)
             historyGraph(navController)
             progressGraph(navController)
             planGraph(navController)
