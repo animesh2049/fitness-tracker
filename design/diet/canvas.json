@@ -1,0 +1,17 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Diet today", "x": 0, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "Meal.dc.html", "title": "Meal recipe", "x": 480, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "MealEditor.dc.html", "title": "Edit meal", "x": 960, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "Meals.dc.html", "title": "Meals library", "x": 0, "y": 980, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "WeekPlan.dc.html", "title": "Week plan", "x": 480, "y": 980, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "Reminders.dc.html", "title": "Meal times and reminders", "x": 960, "y": 980, "w": 390, "h": 844, "is_interactive": true }
+  ],
+  "annotations": [
+    { "id": "flow-eat", "x": 0, "y": -190, "w": 440, "text": "Diet tab (new fifth tab): the current meal by time of day, with the others below. Use the Simulate tweak on Diet today to see morning, midday, evening and late. The calendar button in the header and the Week plan button at the bottom open the Week plan screen; Meals and Reminders sit beside it. Tap a meal row to see its quantities. Open recipe leads to the Meal recipe screen, where the servings stepper scales every ingredient." },
+    { "id": "flow-plan", "x": 480, "y": -150, "w": 420, "text": "Editing: Edit meal adds and removes ingredients and steps and marks a meal as needing prep the day before. Meals library filters by slot and confirms deletes inline, warning when a meal is used in the week plan. Open and Edit lead to the Meal recipe and Edit meal screens." },
+    { "id": "flow-week", "x": 480, "y": 1880, "w": 420, "text": "Week plan: a 7 by 3 grid that repeats every week. Tap a cell to pick a meal tagged for that slot. Amber dot marks prep-ahead meals; the day's protein total sits under the day name." },
+    { "id": "flow-remind", "x": 960, "y": 1880, "w": 400, "text": "Reminders: meal windows drive what counts as now. The prep notification fires at 21:00 only on evenings before a prep-ahead meal; the meal notification fires when a window opens. Both are local notifications, no network." }
+  ],
+  "launch": { "view": "canvas" }
+}
