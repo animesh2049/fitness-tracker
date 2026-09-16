@@ -270,7 +270,7 @@ The following are desirable but explicitly deferred:
 - Whether swap should move the cycle pointer past the swapped slot by default.
 - Whether to support plate-based weight entry (bar plus plates) or only total weight.
 
-## 14. Diet planner (version 2, designed 2026-09-15)
+## 14. Diet planner (version 0.2, designed and built 2026-09-15)
 
 Design canvas: `design/diet/` (six clickable artboards) and https://claude.ai/artifact/VojP6qYXbnWaqDWEmiQjPJ
 
