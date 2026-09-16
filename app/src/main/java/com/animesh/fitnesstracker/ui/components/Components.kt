@@ -27,8 +27,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -160,7 +162,10 @@ fun PillTag(text: String, color: Color = Tokens.Muted, borderColor: Color = Toke
 
 /** Big number with plus and minus, 44 dp hit targets. */
 @Composable
-fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit, modifier: Modifier = Modifier) {
+fun Stepper(
+    label: String, value: String, onMinus: () -> Unit, onPlus: () -> Unit, modifier: Modifier = Modifier,
+    minusEnabled: Boolean = true, plusEnabled: Boolean = true
+) {
     Column(
         modifier
             .clip(RoundedCornerShape(12.dp))
@@ -173,20 +178,22 @@ fun Stepper(label: String, value: String, onMinus: () -> Unit, onPlus: () -> Uni
         Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Tokens.Muted)
         Text(value, style = MaterialTheme.typography.displaySmall, color = Tokens.Text, textAlign = TextAlign.Center)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StepButton("−", onMinus)
-            StepButton("+", onPlus)
+            StepButton("−", onMinus, minusEnabled)
+            StepButton("+", onPlus, plusEnabled)
         }
     }
 }
 
+/** A disabled step button stays tappable (no-op) but is dimmed, so the layout does not shift at a limit. */
 @Composable
-private fun StepButton(text: String, onClick: () -> Unit) {
+private fun StepButton(text: String, onClick: () -> Unit, enabled: Boolean = true) {
     Box(
         Modifier
             .size(width = 52.dp, height = 44.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(Tokens.Surface2)
-            .clickable(onClick = onClick),
+            .alpha(if (enabled) 1f else 0.4f)
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(text, style = MaterialTheme.typography.headlineSmall, color = Tokens.Text)
@@ -194,11 +201,11 @@ private fun StepButton(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun StatTile(label: String, value: String, sub: String? = null, modifier: Modifier = Modifier, valueColor: Color = Tokens.Text) {
+fun StatTile(label: String, value: String, sub: String? = null, modifier: Modifier = Modifier, valueColor: Color = Tokens.Text, valueStyle: TextStyle = MonoStat) {
     AppCard(modifier = modifier, padding = PaddingValues(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Tokens.Muted)
-            Text(value, style = MonoStat, color = valueColor)
+            Text(value, style = valueStyle, color = valueColor)
             if (sub != null) Text(sub, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp), color = Tokens.Dim)
         }
     }
