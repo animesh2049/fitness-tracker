@@ -144,7 +144,7 @@ class DietTodayViewModel(private val c: AppContainer) : ViewModel() {
         val prepItems = PrepPlanner.forDate(plan, today)
         val prepVisible = prepItems.isNotEmpty() && PrepPlanner.bannerVisible(settings, minute, today.toEpochDay())
         val prepText = prepItems.takeIf { it.isNotEmpty() }?.joinToString(" ") { item ->
-            "${item.instruction.trim().trimEnd('.')} for ${item.slot.name.lowercase()} (${item.meal.name})."
+            "${slotLabel(item.slot)}, ${item.meal.name}: ${item.instruction.trim()}"
         }
 
         return DietTodayState(
