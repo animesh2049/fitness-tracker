@@ -3,7 +3,10 @@ package com.animesh.fitnesstracker.di
 import android.content.Context
 import com.animesh.fitnesstracker.data.AppDatabase
 import com.animesh.fitnesstracker.data.Seed
+import com.animesh.fitnesstracker.repository.DietPlanRepository
+import com.animesh.fitnesstracker.repository.DietSettingsRepository
 import com.animesh.fitnesstracker.repository.ExerciseRepository
+import com.animesh.fitnesstracker.repository.MealRepository
 import com.animesh.fitnesstracker.repository.GroupRepository
 import com.animesh.fitnesstracker.repository.RoutineRepository
 import com.animesh.fitnesstracker.repository.SessionRepository
@@ -23,6 +26,9 @@ class AppContainer(val appContext: Context, val database: AppDatabase = AppDatab
     val routines = RoutineRepository(database)
     val sessions = SessionRepository(database)
     val settings = SettingsRepository(database.settingsDao())
+    val meals = MealRepository(database)
+    val dietPlans = DietPlanRepository(database)
+    val dietSettings = DietSettingsRepository(database.dietSettingsDao())
     val timer = TimerController(appContext)
 
     init {

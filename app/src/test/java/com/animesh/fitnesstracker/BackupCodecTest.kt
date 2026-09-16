@@ -6,9 +6,16 @@ import com.animesh.fitnesstracker.backup.BackupFormatException
 import com.animesh.fitnesstracker.backup.CsvExport
 import com.animesh.fitnesstracker.data.model.DayLog
 import com.animesh.fitnesstracker.data.model.DayLogKind
+import com.animesh.fitnesstracker.data.model.DietPlan
+import com.animesh.fitnesstracker.data.model.DietPlanCell
+import com.animesh.fitnesstracker.data.model.DietSettings
 import com.animesh.fitnesstracker.data.model.Exercise
 import com.animesh.fitnesstracker.data.model.ExerciseType
 import com.animesh.fitnesstracker.data.model.GroupExercise
+import com.animesh.fitnesstracker.data.model.Ingredient
+import com.animesh.fitnesstracker.data.model.Meal
+import com.animesh.fitnesstracker.data.model.MealSlot
+import com.animesh.fitnesstracker.data.model.MealStep
 import com.animesh.fitnesstracker.data.model.Routine
 import com.animesh.fitnesstracker.data.model.RoutineSlot
 import com.animesh.fitnesstracker.data.model.Session
@@ -59,14 +66,67 @@ class BackupCodecTest {
         settings = Settings(unit = WeightUnit.LB, defaultRestSeconds = 75, seeded = true)
     )
 
+    private fun dietSample() = sample().copy(
+        schemaVersion = 2,
+        meals = listOf(
+            Meal(
+                id = 1, name = "Rajma chawal", slots = "lunch", cookMinutes = 40, kcal = 560.0, proteinG = 20.0, carbsG = 92.0, fatG = 10.0,
+                prepDayBefore = true, prepInstruction = "Soak 1/2 cup rajma overnight.", createdAt = 1_000
+            )
+        ),
+        ingredients = listOf(
+            Ingredient(id = 1, mealId = 1, position = 0, name = "Rajma (soaked)", amount = 0.5, unit = "cup"),
+            Ingredient(id = 2, mealId = 1, position = 1, name = "Rice", amount = 0.75, unit = "cup")
+        ),
+        mealSteps = listOf(
+            MealStep(id = 1, mealId = 1, position = 0, text = "Pressure cook the rajma for 5 whistles."),
+            MealStep(id = 2, mealId = 1, position = 1, text = "Simmer in the masala and serve over rice.")
+        ),
+        dietPlans = listOf(DietPlan(id = 1, name = "Cutting week", isActive = true, createdAt = 1_000)),
+        dietPlanCells = listOf(DietPlanCell(id = 1, planId = 1, dayOfWeek = 2, slot = MealSlot.LUNCH, mealId = 1, servings = 1.5)),
+        dietSettings = DietSettings(prepReminderMinute = 20 * 60, mealReminderEnabled = false, seeded = true)
+    )
+
     @Test
     fun roundTripIsLossless() {
         val original = sample()
         val text = BackupCodec.encode(original)
-        assertTrue(text.contains("\"schemaVersion\": 1"))
+        assertTrue(text.contains("\"schemaVersion\": 2"))
         val decoded = BackupCodec.decode(text)
         assertEquals(original, decoded)
         assertEquals(14, original.rowCount)
+    }
+
+    @Test
+    fun versionOneFileDecodesWithEmptyDietTables() {
+        val text = """{"schemaVersion": 1, "exportedAt": 1, "appVersion": "0.1.0", "exercises": [{"id": 3, "name": "Row", "type": "WEIGHT"}], "settings": {"unit": "KG"}}"""
+        val file = BackupCodec.decode(text)
+        assertEquals(1, file.schemaVersion)
+        assertEquals(1, file.exercises.size)
+        assertEquals(emptyList<Meal>(), file.meals)
+        assertEquals(emptyList<Ingredient>(), file.ingredients)
+        assertEquals(emptyList<MealStep>(), file.mealSteps)
+        assertEquals(emptyList<DietPlan>(), file.dietPlans)
+        assertEquals(emptyList<DietPlanCell>(), file.dietPlanCells)
+        assertEquals(null, file.dietSettings)
+        assertEquals(2, file.rowCount)
+    }
+
+    @Test
+    fun versionTwoRoundTripKeepsMealsAndPlan() {
+        val original = dietSample()
+        val text = BackupCodec.encode(original)
+        assertTrue(text.contains("\"slot\": \"LUNCH\""))
+        assertTrue(text.contains("\"prepInstruction\": \"Soak 1/2 cup rajma overnight.\""))
+        val decoded = BackupCodec.decode(text)
+        assertEquals(original, decoded)
+        assertEquals(2, decoded.ingredients.size)
+        assertEquals(2, decoded.mealSteps.size)
+        assertEquals(1, decoded.dietPlanCells.size)
+        assertEquals(1L, decoded.dietPlanCells[0].mealId)
+        assertEquals(1.5, decoded.dietPlanCells[0].servings, 0.0)
+        assertEquals(1200, decoded.dietSettings!!.prepReminderMinute)
+        assertEquals(14 + 1 + 2 + 2 + 1 + 1 + 1, decoded.rowCount)
     }
 
     @Test
