@@ -8,6 +8,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -54,14 +59,13 @@ import com.animesh.fitnesstracker.ui.components.AppCard
 import com.animesh.fitnesstracker.ui.components.BottomActionBar
 import com.animesh.fitnesstracker.ui.components.ConfirmDialog
 import com.animesh.fitnesstracker.ui.components.PillTag
-import com.animesh.fitnesstracker.ui.components.ScreenHeader
 import com.animesh.fitnesstracker.ui.components.SecondaryButton
 import com.animesh.fitnesstracker.ui.theme.MonoNumber
 import com.animesh.fitnesstracker.ui.theme.Tokens
 
 /** The active week plan as a seven by three grid. Tapping a cell opens an in-screen picker for that slot. */
 @Composable
-fun WeekPlanScreen(onOpenMeals: () -> Unit, onOpenReminders: () -> Unit, onOpenMeal: (Long) -> Unit) {
+fun WeekPlanScreen(onBack: () -> Unit, onOpenMeals: () -> Unit, onOpenReminders: () -> Unit, onOpenMeal: (Long) -> Unit) {
     val container = appContainer()
     val vm: WeekPlanViewModel = viewModel { WeekPlanViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -70,7 +74,18 @@ fun WeekPlanScreen(onOpenMeals: () -> Unit, onOpenReminders: () -> Unit, onOpenM
     BackHandler(enabled = state.pick != null) { vm.closePicker() }
 
     Column(Modifier.fillMaxSize()) {
-        ScreenHeader("Diet · Week plan", state.planName, "Active · repeats every week · 3 meals a day")
+        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp, top = 12.dp, bottom = 0.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(44.dp),
+                colors = IconButtonDefaults.iconButtonColors(contentColor = Tokens.TextSoft)
+            ) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back to today") }
+            Text("DIET · WEEK PLAN", style = MaterialTheme.typography.labelMedium, color = Tokens.Muted, modifier = Modifier.padding(start = 4.dp))
+        }
+        Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(state.planName, style = MaterialTheme.typography.headlineLarge, color = Tokens.Text)
+            Text("Active · repeats every week · 3 meals a day", style = MaterialTheme.typography.bodyMedium, color = Tokens.Muted)
+        }
         val pick = state.pick
         if (pick != null) {
             CellPicker(pick, onPick = vm::pick, onLeaveEmpty = vm::leaveEmpty, onCancel = vm::closePicker)
