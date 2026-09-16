@@ -51,7 +51,7 @@ import com.animesh.fitnesstracker.ui.components.PillTag
 import com.animesh.fitnesstracker.ui.components.SecondaryButton
 import com.animesh.fitnesstracker.ui.components.SectionLabel
 import com.animesh.fitnesstracker.ui.components.StatTile
-import com.animesh.fitnesstracker.ui.components.Stepper
+import com.animesh.fitnesstracker.ui.components.InlineStepper
 import com.animesh.fitnesstracker.ui.theme.MonoNumber
 import com.animesh.fitnesstracker.ui.theme.MonoStat
 import com.animesh.fitnesstracker.ui.theme.Tokens
@@ -146,8 +146,8 @@ private fun MealBody(details: MealWithDetails, servings: Int, prepReminderMinute
         AppCard(padding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 SectionLabel("Ingredients", Modifier.weight(1f))
-                Stepper(
-                    label = if (servings == 1) "Serving" else "Servings", value = servings.toString(),
+                InlineStepper(
+                    value = if (servings == 1) "1 serving" else "$servings servings",
                     onMinus = onMinus, onPlus = onPlus,
                     minusEnabled = servings > MIN_SERVINGS, plusEnabled = servings < MAX_SERVINGS
                 )

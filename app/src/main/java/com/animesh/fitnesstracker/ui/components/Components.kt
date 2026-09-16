@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -185,6 +186,16 @@ fun Stepper(
 }
 
 /** A disabled step button stays tappable (no-op) but is dimmed, so the layout does not shift at a limit. */
+/** Compact one-line stepper: minus, value, plus. Used where a full [Stepper] tile is too tall. */
+@Composable
+fun InlineStepper(value: String, onMinus: () -> Unit, onPlus: () -> Unit, modifier: Modifier = Modifier, minusEnabled: Boolean = true, plusEnabled: Boolean = true) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        StepButton("−", onMinus, minusEnabled)
+        Text(value, style = MaterialTheme.typography.titleMedium, color = Tokens.Text, textAlign = TextAlign.Center, modifier = Modifier.widthIn(min = 88.dp))
+        StepButton("+", onPlus, plusEnabled)
+    }
+}
+
 @Composable
 private fun StepButton(text: String, onClick: () -> Unit, enabled: Boolean = true) {
     Box(
