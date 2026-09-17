@@ -32,4 +32,35 @@ object Dates {
         val s = totalSeconds.coerceAtLeast(0)
         return "%d:%02d".format(s / 60, s % 60)
     }
+
+    // Unix second helpers for the watch data, which the watch stamps in seconds.
+
+    /** First second of the local day. */
+    fun dayStartSeconds(epochDay: Long, zone: ZoneId = ZoneId.systemDefault()): Long =
+        LocalDate.ofEpochDay(epochDay).atStartOfDay(zone).toEpochSecond()
+
+    /** First second of the next local day (exclusive end of [epochDay]). */
+    fun dayEndSeconds(epochDay: Long, zone: ZoneId = ZoneId.systemDefault()): Long = dayStartSeconds(epochDay + 1, zone)
+
+    fun epochDayOfSeconds(seconds: Long, zone: ZoneId = ZoneId.systemDefault()): Long =
+        java.time.Instant.ofEpochSecond(seconds).atZone(zone).toLocalDate().toEpochDay()
+
+    /** The Monday on or before the day (intensity minutes reset on Monday). */
+    fun mondayOf(epochDay: Long): Long = LocalDate.ofEpochDay(epochDay).with(java.time.DayOfWeek.MONDAY).toEpochDay()
+
+    /** Zone offset in seconds on the given day, for SQL that groups timestamps by local day. */
+    fun zoneOffsetSeconds(epochDay: Long, zone: ZoneId = ZoneId.systemDefault()): Long =
+        LocalDate.ofEpochDay(epochDay).atStartOfDay(zone).offset.totalSeconds.toLong()
+
+    private val hhmm = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+
+    /** Local wall clock time of a Unix second, "06:10". */
+    fun hhmm(seconds: Long, zone: ZoneId = ZoneId.systemDefault()): String =
+        java.time.Instant.ofEpochSecond(seconds).atZone(zone).format(hhmm)
+
+    /** "7 h 12 min", "45 min". */
+    fun hoursMinutes(totalSeconds: Int): String {
+        val minutes = (totalSeconds.coerceAtLeast(0) / 60)
+        return if (minutes < 60) "$minutes min" else "${minutes / 60} h ${minutes % 60} min"
+    }
 }

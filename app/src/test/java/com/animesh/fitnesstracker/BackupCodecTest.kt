@@ -4,6 +4,8 @@ import com.animesh.fitnesstracker.backup.BackupCodec
 import com.animesh.fitnesstracker.backup.BackupFile
 import com.animesh.fitnesstracker.backup.BackupFormatException
 import com.animesh.fitnesstracker.backup.CsvExport
+import com.animesh.fitnesstracker.backup.HealthSettingsBackup
+import com.animesh.fitnesstracker.backup.WatchBackup
 import com.animesh.fitnesstracker.data.model.DayLog
 import com.animesh.fitnesstracker.data.model.DayLogKind
 import com.animesh.fitnesstracker.data.model.DietPlan
@@ -91,10 +93,51 @@ class BackupCodecTest {
     fun roundTripIsLossless() {
         val original = sample()
         val text = BackupCodec.encode(original)
-        assertTrue(text.contains("\"schemaVersion\": 2"))
+        assertTrue(text.contains("\"schemaVersion\": 3"))
         val decoded = BackupCodec.decode(text)
         assertEquals(original, decoded)
         assertEquals(14, original.rowCount)
+    }
+
+    @Test
+    fun versionThreeRoundTripKeepsWatchAndHealthSettings() {
+        val watch = WatchBackup(
+            macAddress = "C4:0D:23:11:AA:01", name = "Forerunner 570", unitId = 3_987_654_321L, firmwareVersion = "5.10",
+            pairedAtMillis = 1_757_900_000_000, autoSyncOnOpen = true, backgroundSyncHours = 2, keepConnectedDuringSessions = true
+        )
+        val original = dietSample().copy(schemaVersion = 3, watch = watch, healthSettings = HealthSettingsBackup(maxHeartRate = 178, stepGoal = 8_000, birthYear = 1996))
+        val text = BackupCodec.encode(original)
+        assertTrue(text.contains("\"macAddress\": \"C4:0D:23:11:AA:01\""))
+        assertTrue(text.contains("\"stepGoal\": 8000"))
+        val decoded = BackupCodec.decode(text)
+        assertEquals(original, decoded)
+        assertEquals(dietSample().rowCount + 1, decoded.rowCount)
+        val info = decoded.watch!!.toWatchInfo()
+        assertEquals("Forerunner 570", info.name)
+        assertEquals(2, info.backgroundSyncHours)
+        assertEquals(watch, WatchBackup.from(info))
+        val settings = decoded.healthSettings!!.applyTo(Settings())
+        assertEquals(178, settings.maxHeartRate)
+        assertEquals(8_000, settings.stepGoal)
+        assertEquals(1996, settings.birthYear)
+        assertEquals(HealthSettingsBackup(178, 8_000, 1996), HealthSettingsBackup.from(settings))
+    }
+
+    @Test
+    fun olderFilesDecodeWithoutWatchAndWithDefaultHealthSettings() {
+        val v2 = """{"schemaVersion": 2, "exportedAt": 1, "appVersion": "0.2.0", "exercises": [], "settings": {"unit": "KG", "seeded": true},
+            "meals": [{"id": 1, "name": "Poha"}], "dietSettings": {"prepReminderMinute": 1200}}"""
+        val file = BackupCodec.decode(v2)
+        assertEquals(2, file.schemaVersion)
+        assertEquals(null, file.watch)
+        assertEquals(null, file.healthSettings)
+        assertEquals(10_000, file.settings!!.stepGoal)
+        assertEquals(null, file.settings!!.maxHeartRate)
+        assertEquals(1, file.meals.size)
+        assertEquals(3, file.rowCount)
+        val v1 = BackupCodec.decode("""{"schemaVersion": 1, "exportedAt": 1, "appVersion": "0.1.0", "settings": {"unit": "LB"}}""")
+        assertEquals(null, v1.watch)
+        assertEquals(190, v1.settings!!.effectiveMaxHeartRate(2026))
     }
 
     @Test
