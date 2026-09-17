@@ -46,7 +46,7 @@ class FileRawFileStore(override val root: File, private val zone: ZoneId = ZoneI
     }
 
     override fun totalBytes(): Long =
-        if (!root.isDirectory) 0 else root.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        if (!root.isDirectory) 0 else root.walkTopDown().filter { it.isFile && it.name.endsWith(".fit") }.sumOf { it.length() }
 
     /** The path a file with these coordinates lives at, whether or not it exists. */
     fun fileFor(watchIndex: Int, fitType: Int, watchTimestamp: Long?): File {
