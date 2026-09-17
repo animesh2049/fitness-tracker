@@ -95,7 +95,7 @@ class FileRawFileStoreTest {
         assertNull(hrv.watchTimestamp)
         val imported = all.first { it.fitType == 44 }
         assertEquals(0, imported.watchIndex)
-        assertEquals(10L, store.totalBytes() - "ignore me".length)
+        assertEquals(10L, store.totalBytes())
     }
 
     @Test
