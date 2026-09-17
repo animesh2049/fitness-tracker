@@ -4,11 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.EventAvailable
-import androidx.compose.material.icons.outlined.FormatListBulleted
-import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Restaurant
-import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -24,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -45,12 +42,20 @@ import com.animesh.fitnesstracker.ui.settings.settingsGraph
 import com.animesh.fitnesstracker.ui.theme.Tokens
 import com.animesh.fitnesstracker.ui.today.TodayScreen
 
+/**
+ * The three bottom tabs. Each is a hub: Workout opens on Today and carries the section row
+ * (Today, History, Progress, Plan); Diet and Health have their own sub-screens.
+ */
 enum class TopLevel(val route: String, val labelRes: Int, val icon: ImageVector) {
-    Today("today", R.string.nav_today, Icons.Outlined.EventAvailable),
+    Workout(WorkoutSection.Today.route, R.string.nav_workout, Icons.Outlined.FitnessCenter),
     Diet("diet", R.string.nav_diet, Icons.Outlined.Restaurant),
-    History("history", R.string.nav_history, Icons.Outlined.History),
-    Progress("progress", R.string.nav_progress, Icons.Outlined.TrendingUp),
-    Plan("plan", R.string.nav_plan, Icons.Outlined.FormatListBulleted)
+    Health("health", R.string.nav_health, Icons.Outlined.MonitorHeart);
+
+    /** True when [route] is inside this tab. */
+    fun owns(route: String?): Boolean = when (this) {
+        Workout -> WorkoutSection.owns(route)
+        else -> route != null && (route == this.route || route.startsWith("${this.route}/"))
+    }
 }
 
 object Routes {
@@ -81,20 +86,22 @@ fun FitnessApp(startRoute: String? = null, onStartRouteConsumed: () -> Unit = {}
 
     Scaffold(
         containerColor = Tokens.Ground,
-        bottomBar = { if (showBar) BottomBar(navController, currentDestination?.hierarchy?.mapNotNull { it.route }?.toSet() ?: emptySet()) }
+        bottomBar = { if (showBar) BottomBar(navController, currentDestination?.route) }
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = TopLevel.Today.route,
+            startDestination = TopLevel.Workout.route,
             modifier = Modifier.padding(padding)
         ) {
-            composable(TopLevel.Today.route) {
+            composable(WorkoutSection.Today.route) {
                 TodayScreen(
                     onOpenSession = { navController.navigate(Routes.session(it)) },
-                    onOpenPlan = { navController.navigateTop(TopLevel.Plan) },
-                    onOpenSettings = { navController.navigate(SettingsRoutes.SETTINGS) }
+                    onOpenPlan = { navController.navigateWorkoutSection(WorkoutSection.Plan) },
+                    onOpenSettings = { navController.navigate(SettingsRoutes.SETTINGS) },
+                    onSection = { navController.navigateWorkoutSection(it) }
                 )
             }
+            composable(TopLevel.Health.route) { Placeholder(stringResource(R.string.nav_health)) }
             composable(
                 Routes.SESSION,
                 arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
@@ -134,10 +141,10 @@ private fun NavHostController.openDeepRoute(route: String) {
 }
 
 @Composable
-private fun BottomBar(navController: NavHostController, activeRoutes: Set<String>) {
+private fun BottomBar(navController: NavHostController, currentRoute: String?) {
     NavigationBar(containerColor = Tokens.Ground, tonalElevation = 0.dp) {
         TopLevel.entries.forEach { top ->
-            val selected = activeRoutes.any { it == top.route || it.startsWith(top.route + "/") }
+            val selected = top.owns(currentRoute)
             NavigationBarItem(
                 selected = selected,
                 // Tapping the tab you are already in returns to its top screen.

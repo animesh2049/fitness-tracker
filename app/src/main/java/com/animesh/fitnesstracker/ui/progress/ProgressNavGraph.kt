@@ -5,9 +5,10 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.animesh.fitnesstracker.ui.navigation.navigateWorkoutSection
 
 object ProgressRoutes {
-    /** Bottom-bar tab; must stay "progress". */
+    /** Workout section root; must stay "progress" (see WorkoutSection). */
     const val HUB = "progress"
     const val EXERCISE_HISTORY = "progress/exercise/{exerciseId}"
     fun exerciseHistory(id: Long) = "progress/exercise/$id"
@@ -16,7 +17,10 @@ object ProgressRoutes {
 /** Adds the Progress hub and the per-exercise history detail to the app's NavHost. */
 fun NavGraphBuilder.progressGraph(navController: NavHostController) {
     composable(ProgressRoutes.HUB) {
-        ProgressScreen(onOpenHistory = { navController.navigate(ProgressRoutes.exerciseHistory(it)) })
+        ProgressScreen(
+            onOpenHistory = { navController.navigate(ProgressRoutes.exerciseHistory(it)) },
+            onSection = { navController.navigateWorkoutSection(it) }
+        )
     }
     composable(
         ProgressRoutes.EXERCISE_HISTORY,

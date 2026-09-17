@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.animesh.fitnesstracker.ui.navigation.navigateWorkoutSection
 
 object PlanRoutes {
     const val HUB = "plan"
@@ -26,7 +27,8 @@ fun NavGraphBuilder.planGraph(navController: NavHostController) {
             onEditRoutine = { navController.navigate(PlanRoutes.routineEdit(it)) },
             onAllRoutines = { navController.navigate(PlanRoutes.ROUTINES) },
             onOpenGroups = { navController.navigate(PlanRoutes.GROUPS) },
-            onOpenExercises = { navController.navigate(PlanRoutes.EXERCISES) }
+            onOpenExercises = { navController.navigate(PlanRoutes.EXERCISES) },
+            onSection = { navController.navigateWorkoutSection(it) }
         )
     }
     composable(PlanRoutes.ROUTINES) {

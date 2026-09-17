@@ -45,10 +45,17 @@ import com.animesh.fitnesstracker.ui.components.PrimaryButton
 import com.animesh.fitnesstracker.ui.components.ScreenHeader
 import com.animesh.fitnesstracker.ui.components.SecondaryButton
 import com.animesh.fitnesstracker.ui.theme.MonoNumber
+import com.animesh.fitnesstracker.ui.navigation.WorkoutSection
+import com.animesh.fitnesstracker.ui.navigation.WorkoutSectionRow
 import com.animesh.fitnesstracker.ui.theme.Tokens
 
 @Composable
-fun TodayScreen(onOpenSession: (Long) -> Unit, onOpenPlan: () -> Unit, onOpenSettings: () -> Unit) {
+fun TodayScreen(
+    onOpenSession: (Long) -> Unit,
+    onOpenPlan: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onSection: (WorkoutSection) -> Unit = {}
+) {
     val container = appContainer()
     val vm: TodayViewModel = viewModel { TodayViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -65,18 +72,19 @@ fun TodayScreen(onOpenSession: (Long) -> Unit, onOpenPlan: () -> Unit, onOpenSet
             Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = Tokens.Muted)
         }
     }
+    val sections: @Composable () -> Unit = { WorkoutSectionRow(WorkoutSection.Today, onSection) }
     Column(Modifier.fillMaxSize()) {
         when (val ui = state.ui) {
             TodayUi.Loading -> Spacer(Modifier.weight(1f))
             TodayUi.NoRoutine -> {
-                ScreenHeader(state.dateLine, "No routine", trailing = settingsButton)
+                ScreenHeader(state.dateLine, "No routine", trailing = settingsButton, below = sections)
                 EmptyState(
                     "Nothing scheduled", "Create a routine under Plan to see what to do each day.",
                     modifier = Modifier.weight(1f)
                 ) { SecondaryButton("Open Plan", onOpenPlan) }
             }
             is TodayUi.Rest -> {
-                ScreenHeader(state.dateLine, ui.title, ui.subtitle, trailing = settingsButton)
+                ScreenHeader(state.dateLine, ui.title, ui.subtitle, trailing = settingsButton, below = sections)
                 if (state.showSwap) {
                     SwapPicker(state, vm, Modifier.weight(1f))
                 } else {
@@ -99,7 +107,7 @@ fun TodayScreen(onOpenSession: (Long) -> Unit, onOpenPlan: () -> Unit, onOpenSet
                 }
             }
             is TodayUi.Workout -> {
-                ScreenHeader(state.dateLine, if (state.showSwap) "Swap workout" else ui.title, if (state.showSwap) "Scheduled: ${ui.title}" else ui.subtitle, trailing = settingsButton)
+                ScreenHeader(state.dateLine, if (state.showSwap) "Swap workout" else ui.title, if (state.showSwap) "Scheduled: ${ui.title}" else ui.subtitle, trailing = settingsButton, below = sections)
                 if (state.showSwap) {
                     SwapPicker(state, vm, Modifier.weight(1f))
                 } else {

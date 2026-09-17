@@ -42,6 +42,8 @@ import com.animesh.fitnesstracker.ui.components.ScreenHeader
 import com.animesh.fitnesstracker.ui.components.SecondaryButton
 import com.animesh.fitnesstracker.ui.components.SectionLabel
 import com.animesh.fitnesstracker.ui.theme.MonoNumber
+import com.animesh.fitnesstracker.ui.navigation.WorkoutSection
+import com.animesh.fitnesstracker.ui.navigation.WorkoutSectionRow
 import com.animesh.fitnesstracker.ui.theme.Tokens
 
 /** Plan hub: the active routine's cycle, the week ahead, and links to the editors. */
@@ -50,7 +52,8 @@ fun RoutineScreen(
     onEditRoutine: (Long) -> Unit,
     onAllRoutines: () -> Unit,
     onOpenGroups: () -> Unit,
-    onOpenExercises: () -> Unit
+    onOpenExercises: () -> Unit,
+    onSection: (WorkoutSection) -> Unit = {}
 ) {
     val container = appContainer()
     val vm: RoutineViewModel = viewModel { RoutineViewModel(container) }
@@ -62,12 +65,13 @@ fun RoutineScreen(
         }
     }
 
+    val sections: @Composable () -> Unit = { WorkoutSectionRow(WorkoutSection.Plan, onSection) }
     Column(Modifier.fillMaxSize()) {
         val routine = state.routine
         when {
             state.loading -> Spacer(Modifier.weight(1f))
             routine == null -> {
-                ScreenHeader("Plan · Routine", "No routine", "Nothing is active yet", trailing = allRoutines)
+                ScreenHeader("Workout · Plan", "No routine", "Nothing is active yet", trailing = allRoutines, below = sections)
                 EmptyState(
                     "No active routine",
                     "Build a cycle of workout groups and rest days. The cycle advances when you finish or skip a day.",
@@ -83,7 +87,7 @@ fun RoutineScreen(
                 }
             }
             else -> {
-                ScreenHeader("Plan · Routine", routine.routine.name, state.subtitle, trailing = allRoutines)
+                ScreenHeader("Workout · Plan", routine.routine.name, state.subtitle, trailing = allRoutines, below = sections)
                 LazyColumn(
                     Modifier.weight(1f),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),

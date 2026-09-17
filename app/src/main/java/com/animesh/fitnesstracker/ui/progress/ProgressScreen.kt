@@ -36,10 +36,13 @@ import com.animesh.fitnesstracker.ui.components.ScreenHeader
 import com.animesh.fitnesstracker.ui.components.SectionLabel
 import com.animesh.fitnesstracker.ui.theme.MonoNumber
 import com.animesh.fitnesstracker.ui.theme.MonoStat
+import com.animesh.fitnesstracker.ui.navigation.WorkoutSection
+import com.animesh.fitnesstracker.ui.navigation.WorkoutSectionRow
 import com.animesh.fitnesstracker.ui.theme.Tokens
 
 @Composable
-fun ProgressScreen(onOpenHistory: (Long) -> Unit) {
+fun ProgressScreen(onOpenHistory: (Long) -> Unit, onSection: (WorkoutSection) -> Unit = {}) {
+    val sections: @Composable () -> Unit = { WorkoutSectionRow(WorkoutSection.Progress, onSection) }
     val container = appContainer()
     val vm: ProgressViewModel = viewModel { ProgressViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -49,11 +52,11 @@ fun ProgressScreen(onOpenHistory: (Long) -> Unit) {
         when {
             state.loading -> Spacer(Modifier.weight(1f))
             exercise == null -> {
-                ScreenHeader("Progress", "No history")
+                ScreenHeader("Workout · Progress", "No history", below = sections)
                 EmptyState("No history yet", "Finish a session and your progress shows up here.", modifier = Modifier.weight(1f))
             }
             else -> {
-                ScreenHeader("Progress", exercise.name, state.subtitle)
+                ScreenHeader("Workout · Progress", exercise.name, state.subtitle, below = sections)
                 LazyColumn(
                     Modifier.weight(1f),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),

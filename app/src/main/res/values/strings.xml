@@ -5,6 +5,8 @@
     <string name="nav_progress">Progress</string>
     <string name="nav_diet">Diet</string>
     <string name="nav_plan">Plan</string>
+    <string name="nav_workout">Workout</string>
+    <string name="nav_health">Health</string>
     <string name="timer_channel_name">Workout timers</string>
     <string name="timer_channel_description">Rest and exercise countdowns while a session is running</string>
 </resources>
