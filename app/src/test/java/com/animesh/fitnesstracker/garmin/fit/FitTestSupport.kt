@@ -1,0 +1,106 @@
+package com.animesh.fitnesstracker.garmin.fit
+
+import java.io.ByteArrayOutputStream
+
+/** Loads the Forerunner 570 fixtures from `src/test/resources/fit`. */
+object FitFixtures {
+    val all = listOf(
+        "MONITOR_M9FM1100.fit", "MONITOR_M9G00000.fit", "MONITOR_M9GL2255.fit", "MONITOR_M9GL2445.fit",
+        "SLEEP_G9G80120.fit", "HRV_G9G80118.fit", "SKINTEMP_G9G80127.fit",
+        "METRICS_F85H0122.fit", "METRICS_G9FM3212.fit", "METRICS_G9FM3213.fit", "METRICS_G9G80119.fit", "METRICS_G9GL2318.fit",
+        "Records.fit", "Totals.fit", "Settings.fit", "device.fit"
+    )
+
+    fun bytes(name: String): ByteArray {
+        val stream = FitFixtures::class.java.getResourceAsStream("/fit/$name")
+            ?: throw IllegalStateException("Fixture /fit/$name not on the test classpath")
+        return stream.use { it.readBytes() }
+    }
+
+    fun decode(name: String): DecodedFit = FitDecoder.decode(bytes(name))
+}
+
+/** Field slot for [FitFileBuilder]: (field number, size in bytes, base type byte). */
+data class Slot(val num: Int, val size: Int, val baseType: Int)
+
+/**
+ * Minimal FIT encoder for synthetic tests: appends definition and data records, then wraps them in
+ * a header and CRC. Byte order of data payloads is the caller's responsibility (see [le16], [be32]).
+ */
+class FitFileBuilder {
+    private val body = ByteArrayOutputStream()
+
+    fun definition(localType: Int, globalNum: Int, fields: List<Slot>, bigEndian: Boolean = false, devFields: List<Slot> = emptyList()): FitFileBuilder {
+        var header = 0x40 or (localType and 0x0F)
+        if (devFields.isNotEmpty()) header = header or 0x20
+        body.write(header)
+        body.write(0)
+        body.write(if (bigEndian) 1 else 0)
+        body.write(if (bigEndian) be16(globalNum) else le16(globalNum))
+        body.write(fields.size)
+        fields.forEach { body.write(it.num); body.write(it.size); body.write(it.baseType) }
+        if (devFields.isNotEmpty()) {
+            body.write(devFields.size)
+            devFields.forEach { body.write(it.num); body.write(it.size); body.write(it.baseType) }
+        }
+        return this
+    }
+
+    fun data(localType: Int, vararg payload: ByteArray): FitFileBuilder {
+        body.write(localType and 0x0F)
+        payload.forEach(body::write)
+        return this
+    }
+
+    fun compressed(localType: Int, timeOffset: Int, vararg payload: ByteArray): FitFileBuilder {
+        body.write(0x80 or ((localType and 0x03) shl 5) or (timeOffset and 0x1F))
+        payload.forEach(body::write)
+        return this
+    }
+
+    fun rawBytes(vararg bytes: Int): FitFileBuilder {
+        bytes.forEach(body::write)
+        return this
+    }
+
+    fun build(headerSize: Int = 14, withHeaderCrc: Boolean = true, declaredDataSize: Int? = null, corruptFileCrc: Boolean = false): ByteArray {
+        val data = body.toByteArray()
+        val out = ByteArrayOutputStream()
+        out.write(headerSize)
+        out.write(0x20)
+        out.write(le16(2149))
+        out.write(le32((declaredDataSize ?: data.size).toLong()))
+        out.write(".FIT".toByteArray(Charsets.US_ASCII))
+        if (headerSize == 14) {
+            val headerCrc = if (withHeaderCrc) FitCrc.compute(out.toByteArray(), 0, 12) else 0
+            out.write(le16(headerCrc))
+        }
+        out.write(data)
+        val whole = out.toByteArray()
+        var crc = FitCrc.compute(whole, 0, whole.size)
+        if (corruptFileCrc) crc = crc xor 0x5555
+        out.write(le16(crc))
+        return out.toByteArray()
+    }
+
+    companion object {
+        fun u8(v: Int) = byteArrayOf(v.toByte())
+        fun le16(v: Int) = byteArrayOf(v.toByte(), (v shr 8).toByte())
+        fun be16(v: Int) = byteArrayOf((v shr 8).toByte(), v.toByte())
+        fun le32(v: Long) = byteArrayOf(v.toByte(), (v shr 8).toByte(), (v shr 16).toByte(), (v shr 24).toByte())
+        fun be32(v: Long) = byteArrayOf((v shr 24).toByte(), (v shr 16).toByte(), (v shr 8).toByte(), v.toByte())
+        fun ascii(text: String, size: Int): ByteArray = ByteArray(size).also { text.toByteArray(Charsets.UTF_8).copyInto(it) }
+
+        const val ENUM = 0x00
+        const val SINT8 = 0x01
+        const val UINT8 = 0x02
+        const val SINT16 = 0x83
+        const val UINT16 = 0x84
+        const val SINT32 = 0x85
+        const val UINT32 = 0x86
+        const val STRING = 0x07
+        const val FLOAT32 = 0x88
+        const val UINT8Z = 0x0A
+        const val BYTE = 0x0D
+    }
+}
