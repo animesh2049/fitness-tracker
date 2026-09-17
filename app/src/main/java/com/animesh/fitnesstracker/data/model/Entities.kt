@@ -217,5 +217,13 @@ data class Settings(
     val autoStartRest: Boolean = true,
     val deloadAfterFailures: Int = 3,
     val deloadPercent: Int = 10,
-    @ColumnInfo(defaultValue = "0") val seeded: Boolean = false
-)
+    @ColumnInfo(defaultValue = "0") val seeded: Boolean = false,
+    // Version 3 (Garmin health). Null max heart rate means 220 minus age, or 190 when the birth year is unknown.
+    val maxHeartRate: Int? = null,
+    @ColumnInfo(defaultValue = "10000") val stepGoal: Int = 10000,
+    val birthYear: Int? = null
+) {
+    /** The max heart rate used for HR zones: the explicit value, else 220 minus age, else 190. */
+    fun effectiveMaxHeartRate(currentYear: Int = java.time.Year.now().value): Int =
+        maxHeartRate ?: birthYear?.let { (220 - (currentYear - it)).coerceIn(100, 220) } ?: 190
+}

@@ -73,6 +73,17 @@ data class DietPlanCellWithMeal(
     val meal: Meal?
 )
 
+data class ActivityWithDetails(
+    @Embedded val activity: Activity,
+    @Relation(parentColumn = "id", entityColumn = "activityId")
+    val laps: List<ActivityLap>,
+    @Relation(parentColumn = "id", entityColumn = "activityId")
+    val points: List<ActivityPoint>
+) {
+    val sortedLaps: List<ActivityLap> get() = laps.sortedBy { it.index }
+    val sortedPoints: List<ActivityPoint> get() = points.sortedBy { it.timestamp }
+}
+
 data class DietPlanWithCells(
     @Embedded val plan: DietPlan,
     @Relation(entity = DietPlanCell::class, parentColumn = "id", entityColumn = "planId")

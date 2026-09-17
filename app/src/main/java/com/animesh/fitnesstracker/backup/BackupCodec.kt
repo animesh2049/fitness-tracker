@@ -19,6 +19,7 @@ import com.animesh.fitnesstracker.data.model.SessionSet
 import com.animesh.fitnesstracker.data.model.SetPrescription
 import com.animesh.fitnesstracker.data.model.Settings
 import com.animesh.fitnesstracker.data.model.WorkoutGroup
+import com.animesh.fitnesstracker.garmin.sync.WatchInfo
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -46,28 +47,76 @@ data class BackupFile(
     val mealSteps: List<MealStep> = emptyList(),
     val dietPlans: List<DietPlan> = emptyList(),
     val dietPlanCells: List<DietPlanCell> = emptyList(),
-    val dietSettings: DietSettings? = null
+    val dietSettings: DietSettings? = null,
+    // Schema version 3 (Garmin watch). Health samples and activities are deliberately absent: they
+    // are far too large for a JSON file, and the FIT zip (FR47) is their migration path.
+    val watch: WatchBackup? = null,
+    val healthSettings: HealthSettingsBackup? = null
 ) {
-    /** Total number of rows across all tables (each settings row counts as one). */
+    /** Total number of rows across all tables (each settings row and the watch pairing count as one). */
     val rowCount: Int
         get() = exercises.size + groups.size + groupExercises.size + setPrescriptions.size +
             routines.size + routineSlots.size + sessions.size + sessionExercises.size +
             sessionSets.size + dayLogs.size + (if (settings != null) 1 else 0) +
             meals.size + ingredients.size + mealSteps.size + dietPlans.size + dietPlanCells.size +
-            (if (dietSettings != null) 1 else 0)
+            (if (dietSettings != null) 1 else 0) + (if (watch != null) 1 else 0)
+}
+
+/** The paired watch and its sync preferences, as the sync stack keeps them outside Room. */
+@Serializable
+data class WatchBackup(
+    val macAddress: String,
+    val name: String,
+    val unitId: Long? = null,
+    val firmwareVersion: String? = null,
+    val pairedAtMillis: Long = 0L,
+    val autoSyncOnOpen: Boolean = true,
+    val backgroundSyncHours: Int = 0,
+    val keepConnectedDuringSessions: Boolean = false
+) {
+    fun toWatchInfo(): WatchInfo = WatchInfo(
+        macAddress = macAddress, name = name, unitId = unitId, firmwareVersion = firmwareVersion, pairedAtMillis = pairedAtMillis,
+        autoSyncOnOpen = autoSyncOnOpen, backgroundSyncHours = backgroundSyncHours, keepConnectedDuringSessions = keepConnectedDuringSessions
+    )
+
+    companion object {
+        fun from(info: WatchInfo): WatchBackup = WatchBackup(
+            macAddress = info.macAddress, name = info.name, unitId = info.unitId, firmwareVersion = info.firmwareVersion,
+            pairedAtMillis = info.pairedAtMillis, autoSyncOnOpen = info.autoSyncOnOpen, backgroundSyncHours = info.backgroundSyncHours,
+            keepConnectedDuringSessions = info.keepConnectedDuringSessions
+        )
+    }
+}
+
+/** The health columns of [Settings], kept separately so they read clearly in the file. */
+@Serializable
+data class HealthSettingsBackup(
+    val maxHeartRate: Int? = null,
+    val stepGoal: Int = 10000,
+    val birthYear: Int? = null
+) {
+    fun applyTo(settings: Settings): Settings = settings.copy(maxHeartRate = maxHeartRate, stepGoal = stepGoal, birthYear = birthYear)
+
+    companion object {
+        fun from(settings: Settings): HealthSettingsBackup =
+            HealthSettingsBackup(maxHeartRate = settings.maxHeartRate, stepGoal = settings.stepGoal, birthYear = settings.birthYear)
+    }
 }
 
 enum class ImportMode { REPLACE, MERGE }
 
-/** Rows written per table, keyed by table name. */
-data class ImportResult(val mode: ImportMode, val counts: Map<String, Int>) {
+/**
+ * Rows written per table, keyed by table name. [watch] is the pairing found in the file (schema 3),
+ * for the caller to hand to the sync stack; the codec does not store it itself.
+ */
+data class ImportResult(val mode: ImportMode, val counts: Map<String, Int>, val watch: WatchBackup? = null) {
     val total: Int get() = counts.values.sum()
 }
 
 class BackupFormatException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
 object BackupCodec {
-    const val SCHEMA_VERSION = 2
+    const val SCHEMA_VERSION = 3
 
     val json: Json = Json {
         prettyPrint = true
@@ -93,10 +142,16 @@ object BackupCodec {
         return file
     }
 
-    suspend fun snapshot(db: AppDatabase, appVersion: String): BackupFile = BackupFile(
+    /**
+     * @param watch the paired watch from the sync stack, or null when none is paired. The codec
+     *   cannot read it itself because the pairing lives outside Room.
+     */
+    suspend fun snapshot(db: AppDatabase, appVersion: String, watch: WatchBackup? = null): BackupFile = BackupFile(
         schemaVersion = SCHEMA_VERSION,
         exportedAt = System.currentTimeMillis(),
         appVersion = appVersion,
+        watch = watch,
+        healthSettings = HealthSettingsBackup.from(db.settingsDao().get() ?: Settings()),
         exercises = db.exerciseDao().getAll(),
         groups = db.groupDao().getAllGroups(),
         groupExercises = db.groupDao().getAllGroupExercises(),
@@ -116,15 +171,17 @@ object BackupCodec {
         dietSettings = db.dietSettingsDao().get()
     )
 
-    /** Pretty JSON of the whole database. */
-    suspend fun export(db: AppDatabase, appVersion: String): String = encode(snapshot(db, appVersion))
+    /** Pretty JSON of the whole database plus the watch pairing. */
+    suspend fun export(db: AppDatabase, appVersion: String, watch: WatchBackup? = null): String = encode(snapshot(db, appVersion, watch))
 
+    /** Writes the file into the database and returns the watch pairing it carried, if any, for the caller to restore. */
     suspend fun import(db: AppDatabase, json: String, mode: ImportMode): ImportResult {
         val file = decode(json)
-        return when (mode) {
+        val result = when (mode) {
             ImportMode.REPLACE -> replace(db, file)
             ImportMode.MERGE -> merge(db, file)
         }
+        return result.copy(watch = file.watch)
     }
 
     /** Deletes every row (child tables first) and inserts the backup with its original ids. */
@@ -170,7 +227,9 @@ object BackupCodec {
         counts["dayLogs"] = sessionDao.insertDayLogsReplace(file.dayLogs).size
         val settings = file.settings
         if (settings != null) {
-            db.settingsDao().upsert(settings.copy(id = 1, seeded = true))
+            // The explicit health settings block (schema 3) wins over the columns serialised inside settings.
+            val withHealth = file.healthSettings?.applyTo(settings) ?: settings
+            db.settingsDao().upsert(withHealth.copy(id = 1, seeded = true))
             counts["settings"] = 1
         } else {
             counts["settings"] = 0
@@ -231,7 +290,7 @@ object BackupCodec {
         ).count { it != -1L }
         counts["sessionSets"] = sessionDao.insertSetsIgnore(file.sessionSets).count { it != -1L }
         counts["dayLogs"] = sessionDao.insertDayLogsIgnore(file.dayLogs).count { it != -1L }
-        val settings = file.settings
+        val settings = file.settings?.let { s -> file.healthSettings?.applyTo(s) ?: s }
         counts["settings"] = if (settings != null && db.settingsDao().insertIgnore(settings.copy(id = 1, seeded = true)) != -1L) 1 else 0
 
         // Meals follow the exercise rule: match by id, then by name; redirect references to the match.
