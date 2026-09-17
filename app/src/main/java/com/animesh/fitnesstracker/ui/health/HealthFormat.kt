@@ -65,10 +65,10 @@ object HealthFormat {
     fun thousands(value: Int): String = "%,d".format(locale, value)
 
     /** "6.4 km" from metres. */
-    fun km(metres: Double): String = "${oneDecimal(metres / 1000.0)} km"
+    fun km(metres: Double): String = "${kmValue(metres)} km"
 
-    /** "6.4" without the unit. */
-    fun kmValue(metres: Double): String = oneDecimal(metres / 1000.0)
+    /** "6.4" without the unit; always one decimal so "6.0 km" does not read as a rounded guess. */
+    fun kmValue(metres: Double): String = "%.1f".format(locale, metres / 1000.0)
 
     /** One decimal, no trailing ".0": "14.2", "54". */
     fun oneDecimal(value: Double): String {

@@ -33,6 +33,7 @@ import androidx.navigation.navArgument
 import com.animesh.fitnesstracker.R
 import com.animesh.fitnesstracker.ui.diet.DietRoutes
 import com.animesh.fitnesstracker.ui.diet.dietGraph
+import com.animesh.fitnesstracker.ui.health.healthGraph
 import com.animesh.fitnesstracker.ui.history.historyGraph
 import com.animesh.fitnesstracker.ui.plan.planGraph
 import com.animesh.fitnesstracker.ui.progress.progressGraph
@@ -102,7 +103,6 @@ fun FitnessApp(startRoute: String? = null, onStartRouteConsumed: () -> Unit = {}
                     onSection = { navController.navigateWorkoutSection(it) }
                 )
             }
-            composable(TopLevel.Health.route) { Placeholder(stringResource(R.string.nav_health)) }
             composable(
                 Routes.SESSION,
                 arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
@@ -111,6 +111,7 @@ fun FitnessApp(startRoute: String? = null, onStartRouteConsumed: () -> Unit = {}
                 SessionScreen(sessionId = id, onClose = { navController.popBackStack() })
             }
             dietGraph(navController)
+            healthGraph(navController)
             historyGraph(navController)
             progressGraph(navController)
             planGraph(navController)
