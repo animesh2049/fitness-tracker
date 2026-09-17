@@ -67,6 +67,13 @@ interface SessionDao {
     @Query("SELECT * FROM sessions")
     suspend fun getAllSessions(): List<Session>
 
+    /** Finished sessions whose [startedAt, endedAt] (millis) intersects the range, for linking watch activities. */
+    @Query(
+        "SELECT * FROM sessions WHERE status = 'COMPLETED' AND endedAt IS NOT NULL " +
+            "AND startedAt <= :toMillis AND endedAt >= :fromMillis ORDER BY startedAt"
+    )
+    suspend fun getCompletedOverlapping(fromMillis: Long, toMillis: Long): List<Session>
+
     @Query("SELECT * FROM session_exercises")
     suspend fun getAllSessionExercises(): List<SessionExercise>
 
