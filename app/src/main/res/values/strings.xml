@@ -9,4 +9,6 @@
     <string name="nav_health">Health</string>
     <string name="timer_channel_name">Workout timers</string>
     <string name="timer_channel_description">Rest and exercise countdowns while a session is running</string>
+    <string name="garmin_sync_channel_name">Watch sync</string>
+    <string name="garmin_sync_channel_description">Progress while downloading data from the paired Garmin watch</string>
 </resources>
