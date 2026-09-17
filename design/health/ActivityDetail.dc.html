@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 28px 12px 8px 12px; display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;">
+    <button aria-label="Back" style="width: 44px; height: 44px; border-radius: 10px; background: transparent; border: 0; color: #ecedee; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 6px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">{{eyebrow}}</div>
+      <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">{{title}}</div>
+      <div style="font-size: 14px; color: #8b9096;">{{subtitle}}</div>
+    </div>
+  </div>
+
+  <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 10px;">
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <sc-for list="{{tiles}}" as="t" hint-placeholder-count="3">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">{{t.label}}</div>
+          <div class="mono" style="font-size: 20px; font-weight: 600;">{{t.value}}</div>
+          <div style="font-size: 11px; color: #6b7076;">{{t.sub}}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{isStrength}}" hint-placeholder-val="{{ true }}">
+      <div style="background: #161b0d; border: 1px solid #33421a; border-radius: 12px; padding: 12px 12px 12px 14px; display: flex; align-items: center; gap: 12px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c8f03c" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"></path><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"></path></svg>
+        <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0;">
+          <div style="font-size: 13px; font-weight: 600;">Linked to your session</div>
+          <div style="font-size: 12px; color: #8b9096;">Upper A · 14 sets · 4,120 kg volume · 2 records</div>
+        </div>
+        <button style="height: 36px; padding: 0 12px; border-radius: 18px; background: transparent; border: 1px solid #33421a; color: #c8f03c; font-size: 12px; font-weight: 600; flex-shrink: 0;">Open</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{isWalk}}" hint-placeholder-val="{{ false }}">
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px;">
+          <div style="font-size: 13px; font-weight: 600;">Route</div>
+          <div class="mono" style="font-size: 12px; color: #8b9096;">6.1 km · 38 m ascent</div>
+        </div>
+        <svg width="334" height="136" viewBox="0 0 334 136" style="display: block; background: #121417; border-radius: 8px;">
+          <polyline points="30,120 52,104 70,92 96,88 118,74 140,58 166,50 190,44 214,52 236,64 250,84 262,104 280,112 300,98 312,80 306,60 290,44 270,36 244,28 218,30 196,38 172,56 150,72 128,90 104,102 80,112 56,120 30,120" fill="none" stroke="#c8f03c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          <circle cx="30" cy="120" r="5" fill="#ecedee" stroke="#121417" stroke-width="2"></circle>
+        </svg>
+        <div style="font-size: 11px; color: #6b7076; padding: 0 4px;">Track only, no map tiles offline</div>
+      </div>
+    </sc-if>
+
+    <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 12px 10px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px;">
+        <div style="font-size: 13px; font-weight: 600;">Heart rate</div>
+        <div class="mono" style="font-size: 12px; color: #8b9096;">{{hrRange}}</div>
+      </div>
+      <div style="position: relative; width: 334px; height: 122px;">
+        <svg width="334" height="122" viewBox="0 0 334 122" style="display: block; overflow: visible;">
+          <sc-for list="{{grid}}" as="g" hint-placeholder-count="3">
+            <line x1="34" x2="326" y1="{{g.y}}" y2="{{g.y}}" stroke="#24272c" stroke-width="1"></line>
+          </sc-for>
+          <polyline points="{{hrPoints}}" fill="none" stroke="#ff6b5c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+        </svg>
+        <sc-for list="{{grid}}" as="g" hint-placeholder-count="3">
+          <div class="mono" style="{{g.pos}}">{{g.label}}</div>
+        </sc-for>
+        <sc-for list="{{axis}}" as="t" hint-placeholder-count="5">
+          <div style="{{t.pos}}">{{t.label}}</div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 13px; font-weight: 600;">Time in zones</div>
+      <sc-for list="{{zones}}" as="z" hint-placeholder-count="5">
+        <div style="display: flex; align-items: center; gap: 10px; height: 26px;">
+          <div class="mono" style="width: 22px; font-size: 12px; color: #8b9096;">{{z.name}}</div>
+          <div style="flex-grow: 1; height: 10px; border-radius: 5px; background: #1f2226; overflow: hidden;"><div style="{{z.bar}}"></div></div>
+          <div class="mono" style="width: 44px; text-align: right; font-size: 13px; font-weight: 600;">{{z.mins}}</div>
+          <div class="mono" style="width: 66px; text-align: right; font-size: 11px; color: #6b7076;">{{z.range}}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{isWalk}}" hint-placeholder-val="{{ false }}">
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 6px 16px; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; height: 32px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">
+          <div style="width: 40px;">Km</div><div style="flex-grow: 1;">Pace</div><div style="width: 60px; text-align: right;">Avg HR</div><div style="width: 60px; text-align: right;">Time</div>
+        </div>
+        <sc-for list="{{laps}}" as="l" hint-placeholder-count="6">
+          <div style="display: flex; align-items: center; height: 40px; border-top: 1px solid #1f2226; font-size: 13px;">
+            <div class="mono" style="width: 40px;">{{l.n}}</div>
+            <div style="flex-grow: 1; display: flex; align-items: center; gap: 8px;"><div style="{{l.bar}}"></div><span class="mono">{{l.pace}}</span></div>
+            <div class="mono" style="width: 60px; text-align: right;">{{l.hr}}</div>
+            <div class="mono" style="width: 60px; text-align: right; color: #8b9096;">{{l.time}}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+      <sc-for list="{{effects}}" as="e" hint-placeholder-count="4">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">{{e.label}}</div>
+          <div class="mono" style="font-size: 20px; font-weight: 600;">{{e.value}}</div>
+          <div style="font-size: 11px; color: #6b7076;">{{e.sub}}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="font-size: 12px; color: #6b7076; padding: 0 4px; line-height: 1.45;">Recorded on Forerunner 570 · firmware 12.36 · file ACTIVITY_2026-09-16_07-05-12_1291.fit</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844},"sport":{"editor":"enum","default":"strength","options":["strength","walk"],"section":"Sample"}}'>
+const STRENGTH = {
+  eyebrow: 'STRENGTH · WED 16 SEP · 07:05', title: 'Upper A', subtitle: '58 min · 386 kcal · Body Battery 78 to 61',
+  tiles: [['Avg HR', '118', 'bpm'], ['Max HR', '158', 'bpm at 07:41'], ['Calories', '386', 'kcal']],
+  hr: [72,84,96,104,118,126,110,122,134,128,112,124,140,152,158,136,118,128,142,150,131,116,126,138,146,128,110,120,132,140,122,108,114,124,130,118,104,98,92,86],
+  axis: ['0', '15', '30', '45', '58 min'],
+  zones: [[6, 'Z1', '98 to 117'], [21, 'Z2', '118 to 137'], [19, 'Z3', '138 to 156'], [10, 'Z4', '157 to 176'], [2, 'Z5', '177+']],
+  effects: [['Aerobic effect', '2.4', 'Maintaining'], ['Anaerobic effect', '0.8', 'No benefit'], ['Recovery', '14 h', 'until 22:00'], ['Load', '86', 'training load']]
+};
+const WALK = {
+  eyebrow: 'WALK · MON 14 SEP · 18:02', title: 'Evening walk', subtitle: '1 h 04 m · 6.1 km · 312 kcal',
+  tiles: [['Distance', '6.1 km', '38 m ascent'], ['Avg pace', '9:42', 'min / km'], ['Avg HR', '96', 'max 121 bpm']],
+  hr: [70,78,84,88,90,92,94,95,96,97,96,98,99,100,101,100,99,98,102,106,112,118,121,116,108,102,98,96,95,94,93,94,95,96,94,92,90,88,84,80],
+  axis: ['0', '16', '32', '48', '64 min'],
+  zones: [[41, 'Z1', '98 to 117'], [18, 'Z2', '118 to 137'], [5, 'Z3', '138 to 156'], [0, 'Z4', '157 to 176'], [0, 'Z5', '177+']],
+  effects: [['Aerobic effect', '1.6', 'Minor benefit'], ['Anaerobic effect', '0.0', 'No benefit'], ['Recovery', '4 h', 'until 23:10'], ['VO2 max', '46', 'unchanged']]
+};
+const LAPS = [['1', '9:58', 92, '9:58'], ['2', '9:44', 95, '19:42'], ['3', '9:31', 98, '29:13'], ['4', '9:36', 99, '38:49'], ['5', '9:22', 104, '48:11'], ['6', '9:52', 97, '58:03'], ['0.1', '10:10', 90, '1:04:12']];
+const P = { l: 34, r: 326, t: 10, b: 96 };
+
+class Component extends DCLogic {
+  renderVals() {
+    const sport = this.props.sport ?? 'strength';
+    const d = sport === 'walk' ? WALK : STRENGTH;
+    const min = 60, max = 170;
+    const step = (P.r - P.l) / (d.hr.length - 1);
+    const yOf = (v) => P.b - ((v - min) / (max - min)) * (P.b - P.t);
+    const zoneTotal = d.zones.reduce((a, z) => a + z[0], 0);
+    const lapMax = 10.2 * 60, lapMin = 9.2 * 60;
+    return {
+      eyebrow: d.eyebrow, title: d.title, subtitle: d.subtitle,
+      tiles: d.tiles.map((t) => ({ label: t[0], value: t[1], sub: t[2] })),
+      isStrength: sport === 'strength', isWalk: sport === 'walk',
+      hrRange: Math.min.apply(null, d.hr) + ' to ' + Math.max.apply(null, d.hr) + ' bpm',
+      grid: [80, 120, 160].map((v) => ({ y: Math.round(yOf(v)), label: String(v), pos: 'position: absolute; left: 0; width: 28px; text-align: right; top: ' + (Math.round(yOf(v)) - 6) + 'px; font-size: 10px; line-height: 12px; color: #8b9096;' })),
+      hrPoints: d.hr.map((v, i) => (P.l + i * step).toFixed(1) + ',' + yOf(v).toFixed(1)).join(' '),
+      axis: d.axis.map((l, i) => { const x = Math.round(P.l + (i * (P.r - P.l)) / (d.axis.length - 1)); return { label: l, pos: 'position: absolute; top: 108px; left: ' + x + 'px; transform: translateX(' + (i === d.axis.length - 1 ? '-100%' : (i === 0 ? '0' : '-50%')) + '); white-space: nowrap; font-size: 10px; line-height: 12px; color: #6b7076;' }; }),
+      zones: d.zones.map((z, i) => ({ name: z[1], mins: z[0] + ' m', range: z[2], bar: 'width: ' + (zoneTotal ? z[0] / zoneTotal * 100 : 0) + '%; height: 100%; background: ' + ['#5d7a12', '#8fb520', '#c8f03c', '#f5b400', '#ff6b5c'][i] + ';' })),
+      laps: LAPS.map((l) => { const parts = l[1].split(':'); const s = Number(parts[0]) * 60 + Number(parts[1]); const w = 30 + (1 - (s - lapMin) / (lapMax - lapMin)) * 80; return { n: l[0], pace: l[1], hr: String(l[2]), time: l[3], bar: 'width: ' + w.toFixed(0) + 'px; height: 8px; border-radius: 4px; background: #5d7a12;' }; }),
+      effects: d.effects.map((e) => ({ label: e[0], value: e[1], sub: e[2] }))
+    };
+  }
+}
+</script>
+</body>
+</html>
