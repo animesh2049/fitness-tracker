@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.animesh.fitnesstracker.ui.health.HealthRoutes
 import com.animesh.fitnesstracker.ui.navigation.navigateWorkoutSection
 
 object HistoryRoutes {
@@ -25,6 +26,10 @@ fun NavGraphBuilder.historyGraph(navController: NavHostController) {
         arguments = listOf(navArgument("sessionId") { type = NavType.LongType })
     ) { entry ->
         val id = entry.arguments?.getLong("sessionId") ?: return@composable
-        SessionDetailScreen(sessionId = id, onBack = { navController.popBackStack() })
+        SessionDetailScreen(
+            sessionId = id,
+            onBack = { navController.popBackStack() },
+            onOpenActivity = { navController.navigate(HealthRoutes.activity(it)) }
+        )
     }
 }

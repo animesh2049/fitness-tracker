@@ -27,6 +27,8 @@ data class SettingsState(
     /** Outcome of the last export or import, shown under the backup buttons. */
     val backupStatus: String? = null,
     val backupBusy: Boolean = false,
+    /** Name of the paired Garmin watch, null when none is paired. */
+    val watchName: String? = null,
     val loaded: Boolean = false
 )
 
@@ -34,8 +36,8 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     private val status = MutableStateFlow<String?>(null)
     private val busy = MutableStateFlow(false)
 
-    val state: StateFlow<SettingsState> = combine(c.settings.observe(), status, busy) { s, st, b ->
-        SettingsState(settings = s, backupStatus = st, backupBusy = b, loaded = true)
+    val state: StateFlow<SettingsState> = combine(c.settings.observe(), status, busy, c.watch.watch) { s, st, b, w ->
+        SettingsState(settings = s, backupStatus = st, backupBusy = b, watchName = w?.name, loaded = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsState())
 
     val appVersion: String = BuildConfig.VERSION_NAME

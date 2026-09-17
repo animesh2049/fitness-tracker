@@ -290,6 +290,17 @@ private fun RestOverlay(ui: SessionUi, vm: SessionViewModel) {
 }
 
 @Composable
+private fun WatchNumber(label: String, value: String, unit: String?, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Tokens.AccentText)
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(value, style = MonoNumber.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold), color = Tokens.Text, maxLines = 1)
+            if (unit != null) Text(unit, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp), color = Tokens.AccentText, modifier = Modifier.padding(bottom = 1.dp))
+        }
+    }
+}
+
+@Composable
 private fun SummaryView(s: SessionSummary, onDone: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -303,6 +314,22 @@ private fun SummaryView(s: SessionSummary, onDone: () -> Unit) {
                     StatTile("Sets", "${s.sets}", modifier = Modifier.weight(1f))
                     StatTile("Volume", s.volume, modifier = Modifier.weight(1f))
                     StatTile("Records", "${s.records}", modifier = Modifier.weight(1f), valueColor = if (s.records > 0) Tokens.Accent else Tokens.Text)
+                }
+            }
+            s.watch?.let { w ->
+                item {
+                    AppCard(borderColor = Tokens.AccentBorder, background = Tokens.AccentSurface, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("From your watch", style = MaterialTheme.typography.titleSmall, color = Tokens.Accent)
+                            Text(w.name, style = MaterialTheme.typography.bodySmall, color = Tokens.AccentText, maxLines = 1)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            WatchNumber("Avg HR", w.avgHr?.toString() ?: "?", "bpm", Modifier.weight(1f))
+                            WatchNumber("Max HR", w.maxHr?.toString() ?: "?", "bpm", Modifier.weight(1f))
+                            WatchNumber("Calories", w.calories?.toString() ?: "?", "kcal", Modifier.weight(1f))
+                            WatchNumber("Duration", w.duration, null, Modifier.weight(1f))
+                        }
+                    }
                 }
             }
             items(s.rows.size) { i ->
