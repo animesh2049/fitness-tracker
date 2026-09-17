@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.animesh.fitnesstracker.ui.navigation.navigateWorkoutSection
 
 object HistoryRoutes {
     const val HUB = "history"
@@ -14,7 +15,10 @@ object HistoryRoutes {
 
 fun NavGraphBuilder.historyGraph(navController: NavHostController) {
     composable(HistoryRoutes.HUB) {
-        HistoryScreen(onOpenSession = { navController.navigate(HistoryRoutes.session(it)) })
+        HistoryScreen(
+            onOpenSession = { navController.navigate(HistoryRoutes.session(it)) },
+            onSection = { navController.navigateWorkoutSection(it) }
+        )
     }
     composable(
         HistoryRoutes.SESSION,

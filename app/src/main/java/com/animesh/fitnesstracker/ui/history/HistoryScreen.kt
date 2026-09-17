@@ -48,12 +48,14 @@ import com.animesh.fitnesstracker.ui.components.GhostButton
 import com.animesh.fitnesstracker.ui.components.PillTag
 import com.animesh.fitnesstracker.ui.components.ScreenHeader
 import com.animesh.fitnesstracker.ui.theme.MonoNumber
+import com.animesh.fitnesstracker.ui.navigation.WorkoutSection
+import com.animesh.fitnesstracker.ui.navigation.WorkoutSectionRow
 import com.animesh.fitnesstracker.ui.theme.Tokens
 
 private val WEEKDAY_LETTERS = listOf("M", "T", "W", "T", "F", "S", "S")
 
 @Composable
-fun HistoryScreen(onOpenSession: (Long) -> Unit) {
+fun HistoryScreen(onOpenSession: (Long) -> Unit, onSection: (WorkoutSection) -> Unit = {}) {
     val container = appContainer()
     val vm: HistoryViewModel = viewModel { HistoryViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -62,7 +64,7 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
-            eyebrow = "History",
+            eyebrow = "Workout · History",
             title = state.monthTitle,
             subtitle = state.subtitle.ifEmpty { null },
             trailing = {
@@ -70,7 +72,8 @@ fun HistoryScreen(onOpenSession: (Long) -> Unit) {
                     MonthArrow(Icons.Outlined.ChevronLeft, "Previous month", enabled = true, onClick = vm::previousMonth)
                     MonthArrow(Icons.Outlined.ChevronRight, "Next month", enabled = state.canGoNext, onClick = vm::nextMonth)
                 }
-            }
+            },
+            below = { WorkoutSectionRow(WorkoutSection.History, onSection) }
         )
         Column(
             Modifier

@@ -38,18 +38,68 @@ import androidx.compose.ui.unit.sp
 import com.animesh.fitnesstracker.ui.theme.MonoStat
 import com.animesh.fitnesstracker.ui.theme.Tokens
 
+/**
+ * Eyebrow, title and subtitle at the top of a screen, with an optional trailing control and an
+ * optional [below] slot rendered under the title block (used for the Workout tab's section row).
+ */
 @Composable
-fun ScreenHeader(eyebrow: String, title: String, subtitle: String? = null, trailing: (@Composable () -> Unit)? = null) {
-    Row(
-        Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelMedium, color = Tokens.Muted)
-            Text(title, style = MaterialTheme.typography.headlineLarge, color = Tokens.Text)
-            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Tokens.Muted)
+fun ScreenHeader(
+    eyebrow: String,
+    title: String,
+    subtitle: String? = null,
+    trailing: (@Composable () -> Unit)? = null,
+    below: (@Composable () -> Unit)? = null
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelMedium, color = Tokens.Muted)
+                Text(title, style = MaterialTheme.typography.headlineLarge, color = Tokens.Text)
+                if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = Tokens.Muted)
+            }
+            if (trailing != null) trailing()
         }
-        if (trailing != null) trailing()
+        if (below != null) Box(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp)) { below() }
+    }
+}
+
+/**
+ * Segmented control: one pill container with equal-width segments, the selected one filled.
+ * Used for the Workout section row and the Health trend periods.
+ */
+@Composable
+fun SegmentedRow(options: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(Tokens.Surface)
+            .border(BorderStroke(1.dp, Tokens.Border), RoundedCornerShape(10.dp))
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        options.forEachIndexed { index, label ->
+            val isSelected = index == selected
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(38.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isSelected) Tokens.BorderStrong else Color.Transparent)
+                    .clickable { onSelect(index) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (isSelected) Tokens.Text else Tokens.Muted,
+                    maxLines = 1
+                )
+            }
+        }
     }
 }
 
