@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 28px 12px 8px 12px; display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;">
+    <button aria-label="Back" style="width: 44px; height: 44px; border-radius: 10px; background: transparent; border: 0; color: #ecedee; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 6px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Settings</div>
+      <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">Watch</div>
+      <div style="font-size: 14px; color: #8b9096;">{{subtitle}}</div>
+    </div>
+  </div>
+
+  <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 10px;">
+
+    <sc-if value="{{unpaired}}" hint-placeholder-val="{{ true }}">
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-size: 15px; font-weight: 600;">Pair your Garmin</div>
+        <div style="font-size: 13px; color: #8b9096; line-height: 1.5;">The watch talks to this app over Bluetooth only. No Garmin account, no Garmin Connect, no internet. Steps, heart rate, sleep, Body Battery, stress and recorded activities are read from the watch's own files.</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 2px;">
+          <div style="display: flex; gap: 10px; font-size: 13px;"><span class="mono" style="color: #c8f03c; width: 16px;">1</span><span style="color: #b4b8bd;">Finish the watch's own setup and enter your profile on the watch.</span></div>
+          <div style="display: flex; gap: 10px; font-size: 13px;"><span class="mono" style="color: #c8f03c; width: 16px;">2</span><span style="color: #b4b8bd;">If it was ever paired with another phone app, remove that phone on the watch.</span></div>
+          <div style="display: flex; gap: 10px; font-size: 13px;"><span class="mono" style="color: #c8f03c; width: 16px;">3</span><span style="color: #b4b8bd;">Open Settings, Phone, Pair phone on the watch. Ignore the QR code.</span></div>
+        </div>
+      </div>
+      <sc-if value="{{scanning}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;">
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Nearby Garmin watches</div>
+            <div style="font-size: 12px; color: #6b7076;">Scanning…</div>
+          </div>
+          <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px 12px 12px 16px; display: flex; align-items: center; gap: 12px; min-height: 64px; box-sizing: border-box;">
+            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+              <div style="font-size: 14px; font-weight: 500;">Forerunner 570</div>
+              <div class="mono" style="font-size: 12px; color: #8b9096;">F1:2B:9C:44:0A:7E · signal strong</div>
+            </div>
+            <button style="height: 40px; padding: 0 16px; border-radius: 20px; background: #c8f03c; color: #101400; border: 0; font-size: 13px; font-weight: 600;">Pair</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{idle}}" hint-placeholder-val="{{ true }}">
+        <button style="height: 56px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 15px; font-weight: 600;">Scan for watches</button>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{paired}}" hint-placeholder-val="{{ false }}">
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #1f2226; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c8f03c" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"></rect><path d="M9 6V3h6v3M9 18v3h6v-3"></path></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+            <div style="font-size: 16px; font-weight: 600;">Forerunner 570</div>
+            <div class="mono" style="font-size: 12px; color: #8b9096;">F1:2B:9C:44:0A:7E · fw 12.36</div>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+            <div class="mono" style="font-size: 16px; font-weight: 600;">71%</div>
+            <div style="font-size: 11px; color: #6b7076;">battery</div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid #1f2226; padding-top: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 11px; color: #8b9096;">Last sync</span><span class="mono" style="font-size: 14px; font-weight: 600;">{{lastSync}}</span></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 11px; color: #8b9096;">Files stored</span><span class="mono" style="font-size: 14px; font-weight: 600;">1,284</span></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 11px; color: #8b9096;">Data since</span><span class="mono" style="font-size: 14px; font-weight: 600;">2 Jun</span></div>
+        </div>
+      </div>
+
+      <sc-if value="{{syncing}}" hint-placeholder-val="{{ false }}">
+        <div style="background: #161b0d; border: 1px solid #33421a; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="font-size: 13px; font-weight: 600;">Syncing</div>
+            <div class="mono" style="font-size: 12px; color: #8b9096;">file 3 of 7</div>
+          </div>
+          <div style="height: 6px; border-radius: 3px; background: #24272c; overflow: hidden;"><div style="width: 38%; height: 100%; background: #c8f03c;"></div></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="mono" style="font-size: 12px; color: #b4b8bd;">MONITOR 16 Sep · 41 KB</div>
+            <button style="height: 36px; padding: 0 14px; border-radius: 18px; background: transparent; border: 1px solid #33421a; color: #c8f03c; font-size: 12px; font-weight: 600;">Cancel</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{notSyncing}}" hint-placeholder-val="{{ true }}">
+        <button style="height: 56px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 15px; font-weight: 600;">Sync now</button>
+      </sc-if>
+
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 6px 4px 0;">Automatic sync</div>
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 0 16px; display: flex; flex-direction: column;">
+        <sc-for list="{{toggles}}" as="t" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid #1f2226;">
+            <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+              <div style="font-size: 14px; font-weight: 500;">{{t.name}}</div>
+              <div style="font-size: 12px; color: #8b9096;">{{t.sub}}</div>
+            </div>
+            <button onClick="{{t.flip}}" aria-label="{{t.name}}" style="{{t.track}}"><span style="{{t.knob}}"></span></button>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 6px 4px 0;">Data</div>
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 0 16px; display: flex; flex-direction: column;">
+        <div style="display: flex; align-items: center; min-height: 52px; border-bottom: 1px solid #1f2226; font-size: 14px; font-weight: 500;"><span style="flex-grow: 1;">Export watch data</span><span style="font-size: 12px; color: #8b9096;">zip of FIT files</span></div>
+        <div style="display: flex; align-items: center; min-height: 52px; border-bottom: 1px solid #1f2226; font-size: 14px; font-weight: 500;"><span style="flex-grow: 1;">Import watch data</span><span style="font-size: 12px; color: #8b9096;">zip or FIT files</span></div>
+        <div style="display: flex; align-items: center; min-height: 52px; font-size: 14px; font-weight: 500;"><span style="flex-grow: 1;">Re-import all stored files</span><span style="font-size: 12px; color: #8b9096;">1,284 files</span></div>
+      </div>
+
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 6px 4px 0;">Last sync log</div>
+      <div class="mono" style="background: #121417; border: 1px solid #24272c; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #b4b8bd; line-height: 1.5;">
+        <div>21:08:02 connected · MTU 515 · ML handle 1, reliable</div>
+        <div>21:08:03 handshake ok · protocol 150 · max packet 375</div>
+        <div>21:08:04 directory 7 new · MONITOR 3, SLEEP 1, HRV 1, METRICS 1, ACTIVITY 1</div>
+        <div>21:08:19 downloaded 7 files · 312 KB · archived on watch</div>
+        <div>21:08:21 imported · 2,880 minutes, 1 night, 1 activity</div>
+      </div>
+      <button style="height: 44px; border-radius: 10px; background: transparent; border: 1px solid #2c3036; color: #b4b8bd; font-size: 13px; font-weight: 600;">Share log</button>
+
+      <button style="height: 48px; border-radius: 10px; background: transparent; border: 1px solid #3a2320; color: #ff6b5c; font-size: 14px; font-weight: 600; margin-top: 6px;">Forget watch</button>
+      <div style="font-size: 12px; color: #6b7076; text-align: center; padding: 0 12px 4px;">Removes the pairing. Imported data stays.</div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844},"state":{"editor":"enum","default":"paired","options":["unpaired","scanning","paired","syncing"],"section":"Sample"}}'>
+class Component extends DCLogic {
+  state = { t: [true, false, false] };
+  renderVals() {
+    const s = this.props.state ?? 'paired';
+    const names = [['On app open', 'When the last sync is older than an hour'], ['In the background', 'Every 2 hours when the watch is in range'], ['Stay connected during sessions', 'Shows live heart rate while you train']];
+    const toggles = names.map((n, i) => {
+      const on = this.state.t[i];
+      return {
+        name: n[0], sub: n[1],
+        flip: () => { const t = this.state.t.slice(); t[i] = !t[i]; this.setState({ t }); },
+        track: 'width: 48px; height: 28px; border-radius: 14px; border: 0; padding: 2px; display: flex; align-items: center; flex-shrink: 0; background: ' + (on ? '#c8f03c' : '#2c3036') + '; justify-content: ' + (on ? 'flex-end' : 'flex-start') + ';',
+        knob: 'width: 24px; height: 24px; border-radius: 12px; background: ' + (on ? '#101400' : '#8b9096') + '; display: block;'
+      };
+    });
+    return {
+      subtitle: s === 'unpaired' ? 'No watch paired' : (s === 'scanning' ? 'Looking for watches' : (s === 'syncing' ? 'Sync in progress' : 'Forerunner 570 · paired 2 Jun')),
+      unpaired: s === 'unpaired' || s === 'scanning', scanning: s === 'scanning', idle: s === 'unpaired',
+      paired: s === 'paired' || s === 'syncing', syncing: s === 'syncing', notSyncing: s === 'paired',
+      lastSync: s === 'syncing' ? 'now' : '12 min ago',
+      toggles
+    };
+  }
+}
+</script>
+</body>
+</html>

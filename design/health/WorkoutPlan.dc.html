@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 28px 20px 12px; display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Workout · Plan</div>
+    <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">Push Pull Legs</div>
+    <div style="font-size: 14px; color: #8b9096;">Active · 4 day cycle · advances when you finish or skip</div>
+  </div>
+  <div style="margin: 0 16px 10px; display: flex; background: #17191c; border: 1px solid #24272c; border-radius: 10px; padding: 3px; gap: 3px; flex-shrink: 0;">
+    <button style="flex: 1 1 0; height: 38px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 0; background: transparent; color: #8b9096;">Today</button>
+    <button style="flex: 1 1 0; height: 38px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 0; background: transparent; color: #8b9096;">History</button>
+    <button style="flex: 1 1 0; height: 38px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 0; background: transparent; color: #8b9096;">Progress</button>
+    <button style="flex: 1 1 0; height: 38px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 0; background: #2c3036; color: #ecedee;">Plan</button>
+  </div>
+
+  <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 16px;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 0 4px;">Cycle</div>
+      <sc-for list="{{slots}}" as="s" hint-placeholder-count="4">
+        <button onClick="{{s.pick}}" style="{{s.style}}">
+          <div style="{{s.numStyle}}">{{s.num}}</div>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; text-align: left;">
+            <div style="font-size: 17px; font-weight: 500;">{{s.name}}</div>
+            <div style="font-size: 13px; color: #8b9096;">{{s.meta}}</div>
+          </div>
+          <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: {{s.badgeColor}};">{{s.badge}}</div>
+        </button>
+      </sc-for>
+      <div style="font-size: 12px; color: #6b7076; padding: 0 4px;">Tap a slot to do it today instead.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 0 4px;">Coming up</div>
+      <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px;">
+        <sc-for list="{{upcoming}}" as="u" hint-placeholder-count="7">
+          <div style="{{u.style}}">
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #8b9096;">{{u.day}}</div>
+            <div style="font-size: 12px; font-weight: 600; line-height: 1.2;">{{u.name}}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <sc-if value="{{hasLog}}" hint-placeholder-val="{{ false }}">
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px;">
+        <sc-for list="{{log}}" as="l" hint-placeholder-count="2">
+          <div style="font-size: 13px; color: #b4b8bd;">{{l.text}}</div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; border-top: 1px solid #1f2226;">
+    <div style="display: flex; gap: 8px;">
+      <button onClick="{{skip}}" style="flex: 1 1 0; height: 48px; border-radius: 10px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 14px; font-weight: 500;">Skip today</button>
+      <button onClick="{{rest}}" style="flex: 1 1 0; height: 48px; border-radius: 10px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 14px; font-weight: 500;">Rest today</button>
+    </div>
+    <button style="height: 48px; border-radius: 10px; background: transparent; color: #b4b8bd; border: 1px solid #2c3036; font-size: 14px; font-weight: 500;">Edit routine</button>
+  </div>
+
+  <div style="height: 72px; border-top: 1px solid #1f2226; background: #0e0f11; display: flex; align-items: stretch; flex-shrink: 0;">
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #c8f03c;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M3 8v8M21 8v8M6 12h12"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Workout</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16a8 8 0 0 1-16 0z"></path><path d="M9 3v4M12 2v5M15 3v4"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Diet</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 8-6-16-3 8H2"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Health</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const SLOTS = [
+  { name: 'Push day', meta: '5 exercises · 15 sets · chest, shoulders, triceps', rest: false },
+  { name: 'Pull day', meta: '5 exercises · 14 sets · back, biceps', rest: false },
+  { name: 'Legs day', meta: '5 exercises · 14 sets · quads, hamstrings, calves', rest: false },
+  { name: 'Rest', meta: 'No workout scheduled', rest: true }
+];
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+class Component extends DCLogic {
+  state = { pos: 0, log: [] };
+
+  addLog(text) { this.setState({ log: [{ text }].concat(this.state.log).slice(0, 3) }); }
+
+  renderVals() {
+    const s = this.state;
+    const slots = SLOTS.map((sl, i) => {
+      const isToday = i === s.pos;
+      const isNext = i === (s.pos + 1) % SLOTS.length;
+      const base = 'display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; min-height: 64px; box-sizing: border-box; color: #ecedee; width: 100%; ';
+      const numBase = 'width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; flex-shrink: 0; ';
+      let style, numStyle;
+      if (isToday) { style = base + 'background: #17191c; border: 1px solid #c8f03c;'; numStyle = numBase + 'background: #c8f03c; color: #101400;'; }
+      else { style = base + 'background: #17191c; border: 1px solid #24272c;'; numStyle = numBase + 'background: #1f2226; color: ' + (sl.rest ? '#6b7076' : '#ecedee') + ';'; }
+      return {
+        num: i + 1, name: sl.name, meta: sl.meta, style, numStyle,
+        badge: isToday ? 'Today' : isNext ? 'Next' : '',
+        badgeColor: isToday ? '#c8f03c' : '#6b7076',
+        pick: () => { if (!isToday) { this.setState({ pos: i }); this.addLog('Swapped in ' + sl.name + ' for today.'); } }
+      };
+    });
+
+    const upcoming = [];
+    for (let d = 0; d < 7; d++) {
+      const sl = SLOTS[(s.pos + d) % SLOTS.length];
+      const style = 'border-radius: 8px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-height: 52px; box-sizing: border-box; ' + (d === 0 ? 'background: #17191c; border: 1px solid #c8f03c;' : sl.rest ? 'background: transparent; border: 1px solid #1f2226; color: #6b7076;' : 'background: #17191c; border: 1px solid #24272c;');
+      upcoming.push({ day: DAYS[d], name: sl.rest ? 'Rest' : sl.name.replace(' day', ''), style });
+    }
+
+    return {
+      slots, upcoming,
+      log: s.log,
+      hasLog: s.log.length > 0,
+      skip: () => { const cur = SLOTS[s.pos]; this.setState({ pos: (s.pos + 1) % SLOTS.length }); this.addLog('Skipped ' + cur.name + '. Cycle moved on.'); },
+      rest: () => this.addLog('Rest day logged. ' + SLOTS[s.pos].name + ' stays scheduled for tomorrow.')
+    };
+  }
+}
+</script>
+</body>
+</html>

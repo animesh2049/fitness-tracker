@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 28px 12px 8px 12px; display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;">
+    <button aria-label="Back" style="width: 44px; height: 44px; border-radius: 10px; background: transparent; border: 0; color: #ecedee; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 6px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">{{eyebrow}}</div>
+      <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">{{duration}}</div>
+      <div style="font-size: 14px; color: #8b9096;">{{window}}</div>
+    </div>
+  </div>
+
+  <div style="padding: 0 16px 8px; display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+    <button onClick="{{prev}}" aria-label="Previous night" style="{{prevStyle}}">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </button>
+    <div style="flex-grow: 1; height: 44px; border-radius: 10px; background: #17191c; border: 1px solid #24272c; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500;">{{nightLabel}}</div>
+    <button onClick="{{next}}" aria-label="Next night" style="{{nextStyle}}">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+    </button>
+  </div>
+
+  <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 10px;">
+
+    <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 12px 10px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px;">
+        <div style="font-size: 13px; font-weight: 600;">Stages</div>
+        <div style="height: 22px; padding: 0 10px; border-radius: 11px; background: #c8f03c; color: #101400; font-size: 12px; font-weight: 600; display: flex; align-items: center;">{{scoreLabel}}</div>
+      </div>
+      <div style="position: relative; width: 334px; height: 152px;">
+        <svg width="334" height="152" viewBox="0 0 334 152" style="display: block; overflow: visible;">
+          <sc-for list="{{lanes}}" as="l" hint-placeholder-count="4">
+            <line x1="52" x2="330" y1="{{l.y}}" y2="{{l.y}}" stroke="#24272c" stroke-width="1"></line>
+          </sc-for>
+          <sc-for list="{{segments}}" as="s" hint-placeholder-count="12">
+            <rect x="{{s.x}}" y="{{s.y}}" width="{{s.w}}" height="18" rx="3" fill="{{s.fill}}"></rect>
+          </sc-for>
+        </svg>
+        <sc-for list="{{lanes}}" as="l" hint-placeholder-count="4">
+          <div style="{{l.pos}}">{{l.name}}</div>
+        </sc-for>
+        <sc-for list="{{ticks}}" as="t" hint-placeholder-count="5">
+          <div class="mono" style="{{t.pos}}">{{t.label}}</div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 6px 16px; display: flex; flex-direction: column;">
+      <sc-for list="{{stageRows}}" as="r" hint-placeholder-count="4">
+        <div style="display: flex; align-items: center; gap: 12px; height: 48px; border-bottom: 1px solid #1f2226;">
+          <span style="{{r.dot}}"></span>
+          <div style="width: 48px; font-size: 14px; font-weight: 500;">{{r.name}}</div>
+          <div style="flex-grow: 1; height: 6px; border-radius: 3px; background: #1f2226; overflow: hidden;"><div style="{{r.bar}}"></div></div>
+          <div class="mono" style="width: 78px; text-align: right; font-size: 14px; font-weight: 600; white-space: nowrap;">{{r.dur}}</div>
+          <div class="mono" style="width: 32px; text-align: right; font-size: 12px; color: #8b9096;">{{r.pct}}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <sc-for list="{{stats}}" as="s" hint-placeholder-count="6">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">{{s.label}}</div>
+          <div class="mono" style="font-size: 20px; font-weight: 600;">{{s.value}}</div>
+          <div style="font-size: 11px; color: #6b7076;">{{s.sub}}</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-size: 13px; font-weight: 600;">From the watch</div>
+      <div style="font-size: 13px; color: #8b9096; line-height: 1.45;">Stages, score and HRV status are computed on the Forerunner and read from its sleep and HRV files. The app does not re-score sleep.</div>
+    </div>
+
+    <button style="height: 44px; border-radius: 10px; background: transparent; border: 1px solid #2c3036; color: #b4b8bd; font-size: 13px; font-weight: 600;">Sleep trends</button>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+// Stage codes: 0 awake, 1 REM, 2 light, 3 deep (lane order top to bottom). Segments are [stage, minutes].
+const NIGHTS = [
+  { eyebrow: 'SLEEP · NIGHT TO TUE 15 SEP', nightLabel: 'Mon 14 to Tue 15 Sep', window: '23:58 to 06:36 · fell asleep in 14 min', start: '00', score: 72, scoreWord: 'Fair',
+    seg: [[0,6],[2,24],[3,30],[2,40],[1,18],[0,8],[2,36],[3,20],[2,30],[1,26],[0,6],[2,44],[3,12],[2,34],[1,34],[0,6],[2,24]],
+    stats: [['Restless', '18', 'moments'], ['HRV', '49 ms', 'Low · baseline 52 to 66'], ['Respiration', '15.1', 'breaths / min'], ['SpO2', '95%', 'overnight average'], ['Resting HR', '55', 'lowest 51 at 03:40'], ['Skin temp', '—', 'not read yet']] },
+  { eyebrow: 'SLEEP · NIGHT TO WED 16 SEP', nightLabel: 'Tue 15 to Wed 16 Sep', window: '23:41 to 06:53 · fell asleep in 9 min', start: '00', score: 81, scoreWord: 'Good',
+    seg: [[0,4],[2,22],[3,38],[2,36],[1,20],[2,30],[3,27],[0,5],[2,42],[1,28],[2,40],[3,20],[2,38],[1,42],[0,10],[2,30]],
+    stats: [['Restless', '12', 'moments'], ['HRV', '58 ms', 'Balanced · baseline 52 to 66'], ['Respiration', '14.2', 'breaths / min'], ['SpO2', '96%', 'overnight average'], ['Resting HR', '54', 'lowest 49 at 04:10'], ['Skin temp', '—', 'not read yet']] }
+];
+const LANE_NAMES = ['Awake', 'REM', 'Light', 'Deep'];
+const LANE_COLORS = ['#ff6b5c', '#b4b8bd', '#5d7a12', '#c8f03c'];
+const ROW_ORDER = [3, 2, 1, 0];
+const X0 = 52, X1 = 330, LANE_TOP = 12, LANE_GAP = 30;
+
+function mins(m) { const h = Math.floor(m / 60), r = m % 60; return h ? h + ' h ' + (r < 10 ? '0' + r : r) + ' m' : r + ' m'; }
+
+class Component extends DCLogic {
+  state = { n: 1 };
+
+  renderVals() {
+    const st = this.state;
+    const night = NIGHTS[st.n];
+    const total = night.seg.reduce((a, s) => a + s[1], 0);
+    const scale = (X1 - X0) / total;
+    let x = X0;
+    const segments = night.seg.map((s) => {
+      const seg = { x: x.toFixed(1), w: Math.max(2, s[1] * scale - 1).toFixed(1), y: LANE_TOP + s[0] * LANE_GAP - 9, fill: LANE_COLORS[s[0]] };
+      x += s[1] * scale; return seg;
+    });
+    const lanes = LANE_NAMES.map((name, i) => ({ name, y: LANE_TOP + i * LANE_GAP, pos: 'position: absolute; left: 0; width: 46px; text-align: right; top: ' + (LANE_TOP + i * LANE_GAP - 6) + 'px; font-size: 10px; line-height: 12px; color: #8b9096;' }));
+    const perStage = [0, 0, 0, 0];
+    night.seg.forEach((s) => { perStage[s[0]] += s[1]; });
+    const asleep = total - perStage[0];
+    const stageRows = ROW_ORDER.map((i) => ({
+      name: LANE_NAMES[i], dur: mins(perStage[i]), pct: Math.round(perStage[i] / total * 100) + '%',
+      dot: 'width: 10px; height: 10px; border-radius: 5px; background: ' + LANE_COLORS[i] + '; display: inline-block; flex-shrink: 0;',
+      bar: 'width: ' + (perStage[i] / total * 100) + '%; height: 100%; background: ' + LANE_COLORS[i] + ';'
+    }));
+    const hours = Math.ceil(total / 60);
+    const ticks = [];
+    for (let h = 0; h <= hours; h += 2) { const x = Math.round(X0 + h * 60 * scale); ticks.push({ label: '+' + h + 'h', x, pos: 'position: absolute; top: 136px; left: ' + x + 'px; transform: translateX(-50%); font-size: 10px; line-height: 12px; color: #6b7076;' }); }
+    const style = (enabled) => 'width: 44px; height: 44px; border-radius: 10px; background: #17191c; border: 1px solid #24272c; display: flex; align-items: center; justify-content: center; color: ' + (enabled ? '#ecedee' : '#3a3e44') + ';';
+    return {
+      eyebrow: night.eyebrow, duration: mins(asleep), window: night.window, nightLabel: night.nightLabel,
+      prev: () => this.setState({ n: Math.max(0, st.n - 1) }), next: () => this.setState({ n: Math.min(NIGHTS.length - 1, st.n + 1) }),
+      prevStyle: style(st.n > 0), nextStyle: style(st.n < NIGHTS.length - 1),
+      scoreLabel: 'Score ' + night.score + ' · ' + night.scoreWord, lanes, segments, ticks, stageRows,
+      stats: night.stats.map((s) => ({ label: s[0], value: s[1], sub: s[2] }))
+    };
+  }
+}
+</script>
+</body>
+</html>

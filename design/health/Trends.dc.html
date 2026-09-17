@@ -1,0 +1,203 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 28px 12px 8px 12px; display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;">
+    <button aria-label="Back" style="width: 44px; height: 44px; border-radius: 10px; background: transparent; border: 0; color: #ecedee; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 6px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Health · Trends</div>
+      <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">{{metricName}}</div>
+      <div style="font-size: 14px; color: #8b9096;">{{periodLabel}}</div>
+    </div>
+  </div>
+
+  <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 4px 0 16px; display: flex; flex-direction: column; gap: 12px;">
+    <div class="scroll" style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 16px 0;">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="6">
+        <button onClick="{{c.pick}}" style="{{c.style}}">{{c.name}}</button>
+      </sc-for>
+    </div>
+
+    <div style="margin: 0 16px; display: flex; background: #17191c; border: 1px solid #24272c; border-radius: 10px; padding: 3px; gap: 3px;">
+      <sc-for list="{{periods}}" as="p" hint-placeholder-count="4">
+        <button onClick="{{p.pick}}" style="{{p.style}}">{{p.name}}</button>
+      </sc-for>
+    </div>
+
+    <div style="margin: 0 16px; background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 12px 10px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px;">
+        <div style="font-size: 13px; font-weight: 600;">{{chartTitle}}</div>
+        <div class="mono" style="font-size: 12px; color: #8b9096;">{{chartRange}}</div>
+      </div>
+      <div style="position: relative; width: 334px; height: 210px;">
+        <svg width="334" height="210" viewBox="0 0 334 210" style="display: block; overflow: visible;">
+          <sc-for list="{{grid}}" as="g" hint-placeholder-count="3">
+            <line x1="40" x2="326" y1="{{g.y}}" y2="{{g.y}}" stroke="#24272c" stroke-width="1"></line>
+          </sc-for>
+          <sc-if value="{{isBar}}" hint-placeholder-val="{{ true }}">
+            <sc-for list="{{bars}}" as="b" hint-placeholder-count="7">
+              <rect x="{{b.x}}" y="{{b.y}}" width="{{b.w}}" height="{{b.h}}" rx="3" fill="{{b.fill}}" onClick="{{b.pick}}" style="cursor: pointer;"></rect>
+            </sc-for>
+          </sc-if>
+          <sc-if value="{{isLine}}" hint-placeholder-val="{{ false }}">
+            <polyline points="{{linePoints}}" fill="none" stroke="#c8f03c" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+            <sc-for list="{{points}}" as="p" hint-placeholder-count="7">
+              <circle cx="{{p.x}}" cy="{{p.y}}" r="{{p.r}}" fill="#c8f03c" stroke="#17191c" stroke-width="2"></circle>
+              <circle cx="{{p.x}}" cy="{{p.y}}" r="16" fill="transparent" onClick="{{p.pick}}" style="cursor: pointer;"></circle>
+            </sc-for>
+          </sc-if>
+        </svg>
+        <sc-for list="{{grid}}" as="g" hint-placeholder-count="3">
+          <div class="mono" style="{{g.pos}}">{{g.label}}</div>
+        </sc-for>
+        <sc-for list="{{labels}}" as="l" hint-placeholder-count="7">
+          <div style="{{l.pos}}">{{l.text}}</div>
+        </sc-for>
+        <div class="mono" style="{{sel.style}}">{{sel.label}}</div>
+      </div>
+    </div>
+
+    <div style="margin: 0 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">Average</div>
+        <div class="mono" style="font-size: 20px; font-weight: 600;">{{avg}}</div>
+        <div style="font-size: 11px; color: #6b7076;">{{unitWord}}</div>
+      </div>
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">{{bestWord}}</div>
+        <div class="mono" style="font-size: 20px; font-weight: 600;">{{best}}</div>
+        <div style="font-size: 11px; color: #6b7076;">{{bestWhen}}</div>
+      </div>
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096;">Change</div>
+        <div class="mono" style="{{changeStyle}}">{{change}}</div>
+        <div style="font-size: 11px; color: #6b7076;">vs previous {{periodShort}}</div>
+      </div>
+    </div>
+
+    <div style="margin: 0 16px; background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-size: 13px; font-weight: 600;">{{noteTitle}}</div>
+      <div style="font-size: 13px; color: #8b9096; line-height: 1.45;">{{noteBody}}</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const D7 = ['Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed'];
+const W4 = ['24 Aug', '31 Aug', '7 Sep', '14 Sep'];
+const M6 = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
+const Y12 = ['O', 'N', 'D', 'J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S'];
+const METRICS = [
+  { id: 'steps', name: 'Steps', unit: '', unitWord: 'steps / day', bar: true, higherBetter: true, title: 'Steps per day', note: ['Cumulative on the watch', 'The watch counts steps per activity type as running totals; the app turns them into per-minute deltas and sums them per day.'],
+    d7: [7240, 9130, 14210, 6480, 12904, 5120, 8412], w4: [8900, 9420, 8110, 9060], m6: [7800, 8300, 8900, 9100, 8700, 9060], y12: [6900, 7100, 6800, 7400, 7600, 8000, 7800, 8300, 8900, 9100, 8700, 9060] },
+  { id: 'rhr', name: 'Resting HR', unit: '', unitWord: 'bpm', bar: false, higherBetter: false, title: 'Resting heart rate', note: ['Daily value from the watch', 'One resting value per day, taken from the monitoring file. Lower over months usually means better aerobic fitness.'],
+    d7: [56, 55, 54, 53, 53, 55, 54], w4: [57, 56, 55, 54], m6: [60, 59, 58, 57, 56, 54], y12: [63, 62, 62, 61, 60, 60, 59, 58, 58, 57, 56, 54] },
+  { id: 'bb', name: 'Body Battery', unit: '', unitWord: 'lowest of the day', bar: false, higherBetter: true, title: 'Body Battery low', note: ['Computed on the watch', 'Body Battery arrives every three minutes in the stress records. The trend shows the lowest value each day; the day view shows the full curve.'],
+    d7: [38, 44, 52, 61, 35, 41, 45], w4: [42, 45, 40, 44], m6: [39, 41, 44, 43, 45, 44], y12: [36, 38, 37, 40, 41, 42, 39, 41, 44, 43, 45, 44] },
+  { id: 'stress', name: 'Stress', unit: '', unitWord: 'daily average', bar: false, higherBetter: false, title: 'Average stress', note: ['0 to 100', 'Rest 1 to 25, low 26 to 50, medium 51 to 75, high 76 to 100. Minutes the watch marks as unmeasurable or as activity are excluded.'],
+    d7: [34, 29, 22, 20, 24, 33, 31], w4: [31, 30, 28, 28], m6: [33, 32, 31, 30, 29, 28], y12: [36, 35, 35, 34, 33, 33, 32, 31, 30, 30, 29, 28] },
+  { id: 'sleepScore', name: 'Sleep score', unit: '', unitWord: 'out of 100', bar: false, higherBetter: true, title: 'Sleep score', note: ['Scored on the watch', 'The overall score from the sleep file. Sub-scores exist on the watch and can be added later.'],
+    d7: [74, 79, 88, 83, 86, 72, 81], w4: [76, 78, 80, 80], m6: [72, 74, 76, 77, 78, 80], y12: [70, 71, 70, 72, 73, 74, 74, 76, 77, 78, 78, 80] },
+  { id: 'sleepDur', name: 'Sleep', unit: 'h', unitWord: 'hours asleep', bar: true, higherBetter: true, title: 'Time asleep', note: ['Nights belong to the day they end', 'Awake minutes inside the sleep window are excluded. Naps are not counted here.'],
+    d7: [6.6, 7.1, 8.2, 7.5, 7.75, 6.63, 7.2], w4: [6.9, 7.2, 7.3, 7.3], m6: [6.7, 6.9, 7.0, 7.1, 7.2, 7.3], y12: [6.4, 6.5, 6.5, 6.6, 6.7, 6.8, 6.8, 6.9, 7.0, 7.1, 7.2, 7.3] },
+  { id: 'hrv', name: 'HRV', unit: ' ms', unitWord: 'overnight average', bar: false, higherBetter: true, title: 'Overnight HRV', note: ['Status is the watch’s call', 'The Forerunner reports a nightly average and a personal baseline band. Balanced means the average sits inside the band.'],
+    d7: [55, 57, 63, 60, 61, 49, 58], w4: [56, 58, 57, 58], m6: [52, 53, 55, 56, 57, 58], y12: [48, 49, 50, 51, 52, 52, 53, 54, 55, 56, 57, 58] },
+  { id: 'vo2', name: 'VO2 max', unit: '', unitWord: 'ml / kg / min', bar: false, higherBetter: true, title: 'VO2 max estimate', note: ['From the metrics file', 'Updated by the watch after outdoor runs and walks with GPS. Gym sessions do not change it.'],
+    d7: [46, 46, 46, 46, 46, 46, 46], w4: [45, 45, 46, 46], m6: [43, 44, 44, 45, 45, 46], y12: [41, 41, 42, 42, 43, 43, 44, 44, 45, 45, 45, 46] },
+  { id: 'load', name: 'Load', unit: '', unitWord: 'acute load', bar: true, higherBetter: true, title: 'Training load (7 day)', note: ['Acute vs chronic', 'Acute is the last seven days, chronic the last four weeks. The watch flags productive, maintaining or overreaching from their ratio.'],
+    d7: [280, 292, 310, 305, 318, 300, 312], w4: [268, 281, 296, 312], m6: [210, 236, 250, 262, 281, 312], y12: [150, 160, 172, 180, 195, 205, 210, 236, 250, 262, 281, 312] },
+  { id: 'ready', name: 'Readiness', unit: '', unitWord: 'out of 100', bar: false, higherBetter: true, title: 'Training readiness', note: ['Morning value', 'Combines sleep, recovery time, HRV status and load on the watch. Read once per day after waking.'],
+    d7: [61, 68, 80, 77, 82, 58, 74], w4: [66, 69, 71, 72], m6: [62, 64, 66, 68, 70, 72], y12: [55, 57, 58, 60, 61, 62, 62, 64, 66, 68, 70, 72] },
+  { id: 'im', name: 'Intensity min', unit: '', unitWord: 'minutes / week', bar: true, higherBetter: true, title: 'Intensity minutes', note: ['Weekly, vigorous counts double', 'Moderate plus two times vigorous minutes, reset every Monday. Target 150.'],
+    d7: [12, 20, 34, 0, 40, 22, 32], w4: [120, 138, 154, 94], m6: [98, 110, 126, 132, 140, 148], y12: [70, 74, 80, 86, 92, 96, 98, 110, 126, 132, 140, 148] }
+];
+const PERIODS = [
+  { id: 'd7', name: '7D', label: 'Last 7 days · 10 to 16 Sep', short: 'week', range: '10 Sep to 16 Sep', labels: D7 },
+  { id: 'w4', name: '4W', label: 'Last 4 weeks · weekly averages', short: '4 weeks', range: '24 Aug to 16 Sep', labels: W4 },
+  { id: 'm6', name: '6M', label: 'Last 6 months · monthly averages', short: '6 months', range: 'Apr to Sep 2026', labels: M6 },
+  { id: 'y12', name: '1Y', label: 'Last 12 months · monthly averages', short: 'year', range: 'Oct 2025 to Sep 2026', labels: Y12 }
+];
+const PLOT = { left: 40, right: 326, top: 28, bottom: 174 };
+
+function fmt(v, m) {
+  if (m.id === 'steps') return v.toLocaleString('en-US');
+  if (m.id === 'sleepDur') { const h = Math.floor(v), mm = Math.round((v - h) * 60); return h + ' h ' + (mm < 10 ? '0' + mm : mm) + ' m'; }
+  return String(Math.round(v * 10) / 10) + m.unit;
+}
+
+class Component extends DCLogic {
+  state = { metric: 'rhr', period: 'd7', sel: -1 };
+
+  renderVals() {
+    const st = this.state;
+    const m = METRICS.find((x) => x.id === st.metric);
+    const p = PERIODS.find((x) => x.id === st.period);
+    const vals = m[p.id];
+    const n = vals.length;
+    const sel = st.sel < 0 || st.sel >= n ? n - 1 : st.sel;
+    const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    const pad = (hi - lo) * 0.25 || hi * 0.1 || 1;
+    const min = m.bar ? 0 : Math.floor(lo - pad), max = Math.ceil(hi + pad);
+    const yAt = (v) => PLOT.bottom - ((v - min) / (max - min)) * (PLOT.bottom - PLOT.top);
+    const slot = (PLOT.right - PLOT.left) / n;
+    const xAt = (i) => PLOT.left + slot * (i + 0.5);
+    const barW = Math.min(28, slot * 0.6);
+
+    const chips = METRICS.map((x) => ({
+      name: x.name,
+      style: 'height: 40px; padding: 0 14px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; flex-shrink: 0; ' + (x.id === st.metric ? 'background: #ecedee; color: #101400; border: 0;' : 'background: transparent; color: #b4b8bd; border: 1px solid #2c3036;'),
+      pick: () => this.setState({ metric: x.id, sel: -1 })
+    }));
+    const periods = PERIODS.map((x) => ({
+      name: x.name,
+      style: 'flex: 1 1 0; height: 38px; border-radius: 8px; font-size: 13px; font-weight: 600; border: 0; ' + (x.id === st.period ? 'background: #2c3036; color: #ecedee;' : 'background: transparent; color: #8b9096;'),
+      pick: () => this.setState({ period: x.id, sel: -1 })
+    }));
+    const mid = (min + max) / 2;
+    const grid = [min, mid, max].map((v) => ({ y: Math.round(yAt(v)), label: m.id === 'steps' ? Math.round(v / 1000) + 'k' : String(Math.round(v * 10) / 10), pos: 'position: absolute; left: 0; width: 34px; text-align: right; top: ' + (Math.round(yAt(v)) - 6) + 'px; font-size: 11px; line-height: 12px; color: #8b9096;' }));
+    const bars = vals.map((v, i) => ({ x: (xAt(i) - barW / 2).toFixed(1), y: yAt(v).toFixed(1), w: barW.toFixed(1), h: (PLOT.bottom - yAt(v)).toFixed(1), fill: i === sel ? '#c8f03c' : '#5d7a12', pick: () => this.setState({ sel: i }) }));
+    const points = vals.map((v, i) => ({ x: Math.round(xAt(i)), y: Math.round(yAt(v)), r: i === sel ? 6 : 4, pick: () => this.setState({ sel: i }) }));
+    const labels = p.labels.map((t, i) => ({ text: t, pos: 'position: absolute; top: 188px; left: ' + Math.round(xAt(i)) + 'px; transform: translateX(-50%); font-size: 10px; line-height: 12px; white-space: nowrap; color: ' + (i === sel ? '#ecedee' : '#6b7076') + ';' }));
+    const label = fmt(vals[sel], m);
+    const bw = label.length * 7.5 + 14;
+    const sx = xAt(sel), sy = yAt(vals[sel]);
+    const bx = Math.min(Math.max(sx - bw / 2, PLOT.left), PLOT.right - bw);
+    const avg = vals.reduce((a, b) => a + b, 0) / n;
+    const bestIdx = vals.indexOf(m.higherBetter ? hi : lo);
+    const half = Math.floor(n / 2);
+    const prevAvg = vals.slice(0, half).reduce((a, b) => a + b, 0) / half;
+    const curAvg = vals.slice(half).reduce((a, b) => a + b, 0) / (n - half);
+    const diff = curAvg - prevAvg;
+    const good = m.higherBetter ? diff >= 0 : diff <= 0;
+    return {
+      metricName: m.name, periodLabel: p.label, chips, periods, chartTitle: m.title, chartRange: p.range,
+      grid, isBar: m.bar, isLine: !m.bar, bars, points, linePoints: points.map((q) => q.x + ',' + q.y).join(' '), labels,
+      sel: { label, style: 'position: absolute; left: ' + bx.toFixed(0) + 'px; top: ' + (sy - 32).toFixed(0) + 'px; width: ' + bw.toFixed(0) + 'px; height: 22px; line-height: 22px; text-align: center; border-radius: 6px; background: #ecedee; color: #101400; font-size: 12px; font-weight: 600; pointer-events: none;' },
+      avg: fmt(avg, m), unitWord: m.unitWord, bestWord: m.higherBetter ? 'Best' : 'Lowest', best: fmt(vals[bestIdx], m), bestWhen: p.labels[bestIdx],
+      change: (diff >= 0 ? '+' : '') + fmt(Math.abs(diff), m).replace(/^/, diff < 0 ? '-' : ''),
+      changeStyle: 'font-size: 20px; font-weight: 600; color: ' + (Math.abs(diff) < 0.05 ? '#ecedee' : (good ? '#c8f03c' : '#ff6b5c')) + ';',
+      periodShort: p.short, noteTitle: m.note[0], noteBody: m.note[1]
+    };
+  }
+}
+</script>
+</body>
+</html>

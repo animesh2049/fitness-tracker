@@ -1,0 +1,222 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "title": "Today with Plan in header",
+      "x": -480,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-1"
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Health today",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-1"
+    },
+    {
+      "file": "Sleep.dc.html",
+      "title": "Sleep night",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-1"
+    },
+    {
+      "file": "Trends.dc.html",
+      "title": "Trends",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-1"
+    },
+    {
+      "file": "Activities.dc.html",
+      "title": "Activities",
+      "x": 0,
+      "y": 980,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-1"
+    },
+    {
+      "file": "ActivityDetail.dc.html",
+      "title": "Activity detail",
+      "x": 480,
+      "y": 980,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-1"
+    },
+    {
+      "file": "Watch.dc.html",
+      "title": "Watch settings",
+      "x": 960,
+      "y": 980,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-1"
+    },
+    {
+      "file": "WorkoutToday.dc.html",
+      "title": "Workout \u00b7 Today",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-2"
+    },
+    {
+      "file": "WorkoutHistory.dc.html",
+      "title": "Workout \u00b7 History",
+      "x": 480,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-2"
+    },
+    {
+      "file": "WorkoutProgress.dc.html",
+      "title": "Workout \u00b7 Progress",
+      "x": 960,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-2"
+    },
+    {
+      "file": "WorkoutPlan.dc.html",
+      "title": "Workout \u00b7 Plan",
+      "x": 1440,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-2"
+    },
+    {
+      "file": "DietTabs.dc.html",
+      "title": "Diet (three tabs)",
+      "x": 0,
+      "y": 980,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-2"
+    },
+    {
+      "file": "HealthTabs.dc.html",
+      "title": "Health (three tabs)",
+      "x": 480,
+      "y": 980,
+      "w": 390,
+      "h": 844,
+      "is_interactive": true,
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "flow-today",
+      "x": -480,
+      "y": -190,
+      "w": 420,
+      "text": "Q5 answer: Plan leaves the bottom bar. The Today header gains a Plan button next to the existing Settings gear (the same trailing slot the app already has), and the bar becomes Today, Diet, Health, History, Progress. Everything else on Today is unchanged from the 0.1 design; the Accept and Keep controls still work.",
+      "page": "page-1"
+    },
+    {
+      "id": "flow-health",
+      "x": 0,
+      "y": -210,
+      "w": 440,
+      "text": "Health tab (proposed to replace Plan in the bottom bar; Plan moves to the Today header). Everything shown is read from the Forerunner 570 over Bluetooth, no Garmin account. Use the day arrows to step back to Tuesday and Monday and see the tiles and charts change. Sync now simulates a sync. The sleep card opens Sleep night; Trends and All activities sit at the bottom; the watch button in the header opens Watch settings.",
+      "page": "page-1"
+    },
+    {
+      "id": "flow-sleep",
+      "x": 480,
+      "y": -150,
+      "w": 420,
+      "text": "Sleep night: hypnogram and per-stage totals from the watch's sleep file, score and HRV status from the watch. Night arrows step between the two sample nights.",
+      "page": "page-1"
+    },
+    {
+      "id": "flow-trends",
+      "x": 960,
+      "y": -150,
+      "w": 420,
+      "text": "Trends: one chip per metric, 7D / 4W / 6M / 1Y. Bars for totals (steps, sleep, load, intensity minutes), a line for the rest. Tap a bar or point to read its value; Change compares the second half of the period to the first.",
+      "page": "page-1"
+    },
+    {
+      "id": "flow-acts",
+      "x": 0,
+      "y": 1880,
+      "w": 420,
+      "text": "Activities: recorded workouts grouped by month, filter chips by sport. 'Linked' marks a watch activity matched to a session logged in this app (FR52).",
+      "page": "page-1"
+    },
+    {
+      "id": "flow-detail",
+      "x": 480,
+      "y": 1880,
+      "w": 420,
+      "text": "Activity detail: use the Sport tweak above the frame to switch between a strength session (linked session card, zones, training effect) and a walk (route drawn as a plain line without map tiles, per-km laps).",
+      "page": "page-1"
+    },
+    {
+      "id": "flow-watch",
+      "x": 960,
+      "y": 1880,
+      "w": 420,
+      "text": "Watch settings: use the State tweak to see unpaired, scanning, paired and syncing. Pairing instructions match the watch's own Pair phone flow. Auto-sync toggles map to FR46; Export and Import are the FIT zip path (FR47, FR54); the log is FR55.",
+      "page": "page-1"
+    },
+    {
+      "id": "three-tabs",
+      "x": 0,
+      "y": -250,
+      "w": 900,
+      "page": "page-2",
+      "text": "Alternative: three tabs (Workout, Diet, Health). Each tab is a hub. Workout opens on Today and carries a section row (Today, History, Progress, Plan) under its header; the same row appears on every workout screen, so switching between them is one tap from anywhere in the tab. Diet keeps its existing hub layout (Week plan, Meals, Reminders as buttons); Health keeps Trends, Activities and the watch button. Trade: History and Progress lose their own bottom-bar tab and the section row costs 48 px of height on every workout screen; in return the bar has three equal peers with full-width labels and Plan needs no special home."
+    },
+    {
+      "id": "three-tabs-diet",
+      "x": 960,
+      "y": 980,
+      "w": 400,
+      "page": "page-2",
+      "text": "Diet and Health are unchanged apart from the bar. If the three-tab structure is chosen, the Health today artboard on page 1 stays the reference for the Health hub; only its bar changes."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-2"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Five tabs: Health replaces Plan"
+    },
+    {
+      "id": "page-2",
+      "name": "Three tabs: Workout, Diet, Health"
+    }
+  ]
+}

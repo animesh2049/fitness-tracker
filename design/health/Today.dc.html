@@ -1,0 +1,268 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 28px 12px 12px 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-shrink: 0;">
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">{{dateLine}}</div>
+      <div style="font-size: 30px; font-weight: 600; line-height: 1.1;">{{title}}</div>
+      <div style="font-size: 14px; color: #8b9096;">{{subtitle}}</div>
+    </div>
+    <div style="display: flex; gap: 8px; flex-shrink: 0;">
+      <button aria-label="Plan" style="height: 44px; padding: 0 14px 0 12px; border-radius: 10px; background: #17191c; border: 1px solid #24272c; color: #ecedee; display: flex; align-items: center; gap: 8px; flex-shrink: 0; font-size: 13px; font-weight: 600;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+        <span>Plan</span>
+      </button>
+      <button aria-label="Settings" style="width: 44px; height: 44px; border-radius: 10px; background: #17191c; border: 1px solid #24272c; color: #ecedee; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <sc-if value="{{isWorkout}}" hint-placeholder-val="{{ true }}">
+    <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 10px;">
+      <sc-for list="{{exercises}}" as="item" hint-placeholder-count="5">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <div style="font-size: 17px; font-weight: 500;">{{item.name}}</div>
+              <div class="mono" style="font-size: 14px; color: #8b9096;">{{item.summary}}</div>
+            </div>
+            <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #8b9096; border: 1px solid #2c3036; border-radius: 6px; padding: 4px 7px; flex-shrink: 0;">{{item.typeLabel}}</div>
+          </div>
+          <sc-if value="{{item.pending}}" hint-placeholder-val="{{ true }}">
+            <div style="background: #161b0d; border: 1px solid #33421a; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="font-size: 13px; color: #b9c4a3; line-height: 1.35;">{{item.reason}}</div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <div style="font-size: 15px; font-weight: 600; color: #c8f03c; flex-grow: 1;">Try {{item.sugLabel}}</div>
+                <button onClick="{{item.accept}}" style="height: 40px; padding: 0 16px; border-radius: 8px; background: #c8f03c; color: #101400; border: 0; font-size: 14px; font-weight: 600;">Accept</button>
+                <button onClick="{{item.keep}}" style="height: 40px; padding: 0 14px; border-radius: 8px; background: transparent; color: #ecedee; border: 1px solid #3a3f46; font-size: 14px; font-weight: 500;">Keep</button>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{item.accepted}}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 13px; color: #c8f03c; font-weight: 500;">Updated to {{item.sugLabel}} for today</div>
+          </sc-if>
+          <sc-if value="{{item.kept}}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 13px; color: #8b9096;">Keeping current targets</div>
+          </sc-if>
+          <sc-if value="{{item.hasNote}}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 13px; color: #8b9096;">{{item.note}}</div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; border-top: 1px solid #1f2226; background: #0e0f11;">
+      <button style="height: 56px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 17px; font-weight: 600;">Start session</button>
+      <div style="display: flex; gap: 8px;">
+        <button onClick="{{skip}}" style="flex: 1 1 0; height: 44px; border-radius: 10px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 14px; font-weight: 500;">Skip today</button>
+        <button onClick="{{restToday}}" style="flex: 1 1 0; height: 44px; border-radius: 10px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 14px; font-weight: 500;">Rest today</button>
+        <button onClick="{{openSwap}}" style="flex: 1 1 0; height: 44px; border-radius: 10px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 14px; font-weight: 500;">Swap</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isRest}}" hint-placeholder-val="{{ false }}">
+    <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 0 32px; text-align: center;">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#8b9096" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>
+      <div style="font-size: 22px; font-weight: 600;">{{restHeadline}}</div>
+      <div style="font-size: 15px; color: #8b9096; line-height: 1.4;">{{restBody}}</div>
+    </div>
+    <div style="padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; border-top: 1px solid #1f2226;">
+      <sc-if value="{{showDoneResting}}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{doneResting}}" style="height: 56px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 17px; font-weight: 600;">Done resting</button>
+      </sc-if>
+      <button onClick="{{openSwap}}" style="height: 48px; border-radius: 12px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 15px; font-weight: 500;">Train anyway</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{isSwap}}" hint-placeholder-val="{{ false }}">
+    <div style="flex-grow: 1; padding: 4px 16px; display: flex; flex-direction: column; gap: 10px;">
+      <div style="font-size: 13px; color: #8b9096; padding: 4px 4px 0;">Pick a day to do now. The cycle continues from the next scheduled slot.</div>
+      <sc-for list="{{swapOptions}}" as="g" hint-placeholder-count="3">
+        <button onClick="{{g.pick}}" style="display: flex; justify-content: space-between; align-items: center; text-align: left; background: #17191c; border: 1px solid #24272c; border-radius: 12px; padding: 14px 16px; color: #ecedee; min-height: 56px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <div style="font-size: 17px; font-weight: 500;">{{g.name}}</div>
+            <div style="font-size: 13px; color: #8b9096;">{{g.meta}}</div>
+          </div>
+          <div style="font-size: 14px; font-weight: 600; color: #c8f03c;">Do today</div>
+        </button>
+      </sc-for>
+    </div>
+    <div style="padding: 12px 16px; flex-shrink: 0; border-top: 1px solid #1f2226;">
+      <button onClick="{{cancelSwap}}" style="width: 100%; height: 48px; border-radius: 12px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 15px; font-weight: 500;">Cancel</button>
+    </div>
+  </sc-if>
+
+  <div style="height: 72px; border-top: 1px solid #1f2226; background: #0e0f11; display: flex; align-items: stretch; flex-shrink: 0;">
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #c8f03c;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4M9 15l2 2 4-4"></path></svg>
+      <span style="font-size: 11px; font-weight: 600;">Today</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16a8 8 0 0 1-16 0z"></path><path d="M9 3v4M12 2v5M15 3v4"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Diet</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 8-6-16-3 8H2"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Health</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">History</span>
+    </div>
+    <div style="flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #6b7076;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"></path><path d="M15 7h6v6"></path></svg>
+      <span style="font-size: 11px; font-weight: 500;">Progress</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const CYCLE = ['push', 'pull', 'legs', 'rest'];
+const GROUPS = {
+  push: { name: 'Push day', ex: [
+    { id: 'bench', name: 'Bench press', type: 'weight', sets: 3, reps: 8, weight: 60, sug: { kind: 'weight', to: 62.5, reason: 'Hit 3 × 8 at 60 kg last session. Linear progression adds 2.5 kg.' } },
+    { id: 'ohp', name: 'Overhead press', type: 'weight', sets: 3, reps: 10, weight: 30, sug: { kind: 'deload', to: 27.5, reason: 'Missed reps at 30 kg three sessions in a row. Deload 10 percent and rebuild.' } },
+    { id: 'incline', name: 'Incline dumbbell press', type: 'weight', sets: 3, reps: 10, weight: 22.5, sug: { kind: 'reps', to: 11, reason: 'Hit 3 × 10 at 22.5 kg. Double progression in the 8 to 12 range.' } },
+    { id: 'pushdown', name: 'Triceps pushdown', type: 'weight', sets: 3, reps: 12, weight: 25, sug: null, note: 'Missed the last set last time. Same targets today.' },
+    { id: 'plank', name: 'Plank', type: 'timed', sets: 3, secs: 45, sug: { kind: 'time', to: 55, reason: 'Held 3 × 45 s last session. Adds 10 s.' } }
+  ] },
+  pull: { name: 'Pull day', ex: [
+    { id: 'dl', name: 'Deadlift', type: 'weight', sets: 3, reps: 5, weight: 100, sug: { kind: 'weight', to: 102.5, reason: 'Hit 3 × 5 at 100 kg last session.' } },
+    { id: 'pullup', name: 'Pull-up', type: 'bodyweight', sets: 3, reps: 8, weight: 0, sug: { kind: 'reps', to: 9, reason: 'Hit 3 × 8. Adds 1 rep.' } },
+    { id: 'row', name: 'Barbell row', type: 'weight', sets: 3, reps: 10, weight: 50, sug: null, note: 'Missed reps on set 3 last time. Same targets.' },
+    { id: 'facepull', name: 'Face pull', type: 'weight', sets: 3, reps: 15, weight: 15, sug: null },
+    { id: 'ham', name: 'Hamstring stretch', type: 'timed', sets: 2, secs: 60, sug: null }
+  ] },
+  legs: { name: 'Legs day', ex: [
+    { id: 'squat', name: 'Back squat', type: 'weight', sets: 3, reps: 5, weight: 80, sug: { kind: 'weight', to: 82.5, reason: 'Hit 3 × 5 at 80 kg last session.' } },
+    { id: 'rdl', name: 'Romanian deadlift', type: 'weight', sets: 3, reps: 8, weight: 70, sug: null },
+    { id: 'legpress', name: 'Leg press', type: 'weight', sets: 3, reps: 12, weight: 120, sug: { kind: 'weight', to: 125, reason: 'Hit 3 × 12 at 120 kg. Increment for this machine is 5 kg.' } },
+    { id: 'calf', name: 'Calf raise', type: 'weight', sets: 3, reps: 15, weight: 40, sug: null },
+    { id: 'couch', name: 'Couch stretch', type: 'timed', sets: 2, secs: 45, sug: { kind: 'time', to: 55, reason: 'Held 2 × 45 s last session.' } }
+  ] }
+};
+const TYPE_LABEL = { weight: 'Weight', bodyweight: 'Body', timed: 'Timed' };
+
+function sugLabel(ex) {
+  const s = ex.sug;
+  if (!s) return '';
+  if (s.kind === 'weight' || s.kind === 'deload') return s.to + ' kg';
+  if (s.kind === 'reps') return ex.sets + ' × ' + s.to;
+  return s.to + ' s';
+}
+function summary(ex, accepted) {
+  const s = ex.sug;
+  let reps = ex.reps, weight = ex.weight, secs = ex.secs;
+  if (accepted && s) {
+    if (s.kind === 'weight' || s.kind === 'deload') weight = s.to;
+    if (s.kind === 'reps') reps = s.to;
+    if (s.kind === 'time') secs = s.to;
+  }
+  if (ex.type === 'timed') return ex.sets + ' × ' + secs + ' s';
+  if (ex.type === 'bodyweight') return ex.sets + ' × ' + reps + ' · bodyweight';
+  return ex.sets + ' × ' + reps + ' · ' + weight + ' kg';
+}
+
+class Component extends DCLogic {
+  state = { pos: 0, override: null, view: 'auto', decisions: {} };
+
+  decide(id, value) {
+    this.setState({ decisions: Object.assign({}, this.state.decisions, { [id]: value }) });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const slot = CYCLE[s.pos];
+    const groupId = s.override || (slot === 'rest' ? null : slot);
+    let mode = 'workout';
+    if (s.view === 'swap') mode = 'swap';
+    else if (s.view === 'restLogged') mode = 'rest';
+    else if (!groupId) mode = 'rest';
+
+    const group = groupId ? GROUPS[groupId] : null;
+    const dayNum = s.pos + 1;
+    const nextSlot = CYCLE[(s.pos + 1) % CYCLE.length];
+    const nextName = nextSlot === 'rest' ? 'Rest' : GROUPS[nextSlot].name;
+
+    let title = '', subtitle = '', restHeadline = '', restBody = '';
+    if (mode === 'workout') {
+      title = group.name;
+      subtitle = s.override ? 'Swapped in · cycle day ' + dayNum + ' of 4' : 'Cycle day ' + dayNum + ' of 4 · ' + group.ex.length + ' exercises';
+    } else if (mode === 'swap') {
+      title = 'Swap workout';
+      subtitle = 'Scheduled: ' + (slot === 'rest' ? 'Rest' : GROUPS[slot].name);
+    } else if (s.view === 'restLogged') {
+      title = 'Rest day';
+      subtitle = 'Logged · cycle stays on day ' + dayNum;
+      restHeadline = 'Rest day logged';
+      restBody = (slot === 'rest' ? 'Next workout' : GROUPS[slot].name) + ' stays scheduled. It will show here tomorrow.';
+    } else {
+      title = 'Rest day';
+      subtitle = 'Cycle day ' + dayNum + ' of 4 · Next: ' + nextName;
+      restHeadline = 'Scheduled rest';
+      restBody = 'Next workout is ' + nextName + '. Tap Done resting to move the cycle on, or train anyway.';
+    }
+
+    const exercises = (group ? group.ex : []).map((ex) => {
+      const d = s.decisions[ex.id];
+      const hasSug = !!ex.sug;
+      return {
+        name: ex.name,
+        typeLabel: TYPE_LABEL[ex.type],
+        summary: summary(ex, d === 'accepted'),
+        reason: hasSug ? ex.sug.reason : '',
+        sugLabel: sugLabel(ex),
+        pending: hasSug && !d,
+        accepted: hasSug && d === 'accepted',
+        kept: hasSug && d === 'kept',
+        hasNote: !hasSug && !!ex.note,
+        note: ex.note || '',
+        accept: () => this.decide(ex.id, 'accepted'),
+        keep: () => this.decide(ex.id, 'kept')
+      };
+    });
+
+    const swapOptions = ['push', 'pull', 'legs'].map((id) => ({
+      name: GROUPS[id].name,
+      meta: GROUPS[id].ex.length + ' exercises',
+      pick: () => this.setState({ override: id, view: 'auto', decisions: {} })
+    }));
+
+    return {
+      dateLine: 'Mon 14 Sep',
+      title, subtitle, restHeadline, restBody,
+      isWorkout: mode === 'workout',
+      isRest: mode === 'rest',
+      isSwap: mode === 'swap',
+      showDoneResting: mode === 'rest' && s.view !== 'restLogged',
+      exercises,
+      swapOptions,
+      skip: () => this.setState({ pos: (s.pos + 1) % CYCLE.length, override: null, view: 'auto', decisions: {} }),
+      restToday: () => this.setState({ view: 'restLogged' }),
+      doneResting: () => this.setState({ pos: (s.pos + 1) % CYCLE.length, override: null, view: 'auto', decisions: {} }),
+      openSwap: () => this.setState({ view: 'swap' }),
+      cancelSwap: () => this.setState({ view: 'auto' })
+    };
+  }
+}
+</script>
+</body>
+</html>
