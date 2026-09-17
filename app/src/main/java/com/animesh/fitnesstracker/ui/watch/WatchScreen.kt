@@ -138,6 +138,12 @@ fun WatchScreen(onBack: () -> Unit) {
                     onPair = vm::pair,
                     onOpenBluetoothSettings = { openBluetoothSettings(context) }
                 )
+                DataSection(
+                    state,
+                    onExport = { exportZip.launch("garmin-fit-$today.zip") },
+                    onImport = { importFiles.launch(arrayOf("*/*")) },
+                    onReimport = { confirmReimport = true }
+                )
             } else {
                 PairedContent(
                     state = state,
@@ -318,6 +324,24 @@ private fun PairedContent(
         }
     }
 
+    DataSection(state, onExport, onImport, onReimport)
+
+    SectionLabel("Last sync log", Modifier.padding(top = 6.dp))
+    LogCard(state.log)
+    GhostButton("Share log", onShareLog, Modifier.fillMaxWidth())
+
+    Spacer(Modifier.height(6.dp))
+    GhostButton("Forget watch", onForget, Modifier.fillMaxWidth(), height = 48, contentColor = Tokens.Danger, borderColor = Tokens.DangerBorder)
+    Text(
+        "Removes the pairing. Imported data stays.",
+        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = Tokens.Dim, textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
+    )
+}
+
+/** Export, import and re-import rows. Shown paired or not, so USB copies of the watch's files can be loaded without Bluetooth. */
+@Composable
+private fun DataSection(state: WatchScreenState, onExport: () -> Unit, onImport: () -> Unit, onReimport: () -> Unit) {
     SectionLabel("Data", Modifier.padding(top = 6.dp))
     AppCard(padding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)) {
         Column {
@@ -332,18 +356,6 @@ private fun PairedContent(
         state.dataBusy -> StatusLine("Working…", error = false)
         state.dataStatus != null -> StatusLine(state.dataStatus, error = state.dataStatus.startsWith("Failed"))
     }
-
-    SectionLabel("Last sync log", Modifier.padding(top = 6.dp))
-    LogCard(state.log)
-    GhostButton("Share log", onShareLog, Modifier.fillMaxWidth())
-
-    Spacer(Modifier.height(6.dp))
-    GhostButton("Forget watch", onForget, Modifier.fillMaxWidth(), height = 48, contentColor = Tokens.Danger, borderColor = Tokens.DangerBorder)
-    Text(
-        "Removes the pairing. Imported data stays.",
-        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp), color = Tokens.Dim, textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
-    )
 }
 
 @Composable
