@@ -2,6 +2,7 @@ package com.animesh.fitnesstracker.ui.history
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.animesh.fitnesstracker.data.model.Activity
 import com.animesh.fitnesstracker.data.model.SessionSet
 import com.animesh.fitnesstracker.data.model.SessionStatus
 import com.animesh.fitnesstracker.data.model.SessionWithExercises
@@ -14,6 +15,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -23,13 +25,17 @@ data class SessionDetailState(
     val dateLabel: String = "",
     val meta: String = "",
     val abandoned: Boolean = false,
+    /** The watch activity linked to this session (FR52), null when none. */
+    val activity: Activity? = null,
     val loaded: Boolean = false
 )
 
 class SessionDetailViewModel(private val c: AppContainer, private val sessionId: Long) : ViewModel() {
     private var notesJob: Job? = null
 
-    val state: StateFlow<SessionDetailState> = combine(c.sessions.observeSession(sessionId), c.settings.observe()) { s, settings ->
+    private val linkedActivity = c.activities.observeForSession(sessionId).map { it.firstOrNull() }
+
+    val state: StateFlow<SessionDetailState> = combine(c.sessions.observeSession(sessionId), c.settings.observe(), linkedActivity) { s, settings, activity ->
         if (s == null) SessionDetailState(loaded = true, unit = settings.unit) else {
             val parts = ArrayList<String>()
             val ended = s.session.endedAt
@@ -43,6 +49,7 @@ class SessionDetailViewModel(private val c: AppContainer, private val sessionId:
                 dateLabel = Dates.shortDay(s.session.epochDay),
                 meta = parts.joinToString(" · "),
                 abandoned = s.session.status == SessionStatus.ABANDONED,
+                activity = activity,
                 loaded = true
             )
         }

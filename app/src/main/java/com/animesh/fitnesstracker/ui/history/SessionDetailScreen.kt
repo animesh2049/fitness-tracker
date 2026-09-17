@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.animesh.fitnesstracker.data.model.Activity
 import com.animesh.fitnesstracker.data.model.ExerciseType
 import com.animesh.fitnesstracker.data.model.SessionExerciseWithSets
 import com.animesh.fitnesstracker.data.model.SessionSet
@@ -56,10 +57,11 @@ import com.animesh.fitnesstracker.ui.components.SectionLabel
 import com.animesh.fitnesstracker.ui.components.Stepper
 import com.animesh.fitnesstracker.ui.theme.MonoNumber
 import com.animesh.fitnesstracker.ui.theme.Tokens
+import com.animesh.fitnesstracker.util.Dates
 import com.animesh.fitnesstracker.util.Weights
 
 @Composable
-fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit) {
+fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit, onOpenActivity: (Long) -> Unit = {}) {
     val container = appContainer()
     val vm: SessionDetailViewModel = viewModel(key = "session-detail-$sessionId") { SessionDetailViewModel(container, sessionId) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -93,6 +95,9 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit) {
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    state.activity?.let { activity ->
+                        item(key = "watch") { WatchActivityCard(activity, onOpen = { onOpenActivity(activity.id) }) }
+                    }
                     items(session.sortedExercises.size, key = { session.sortedExercises[it].exercise.id }) { i ->
                         ExerciseCard(session.sortedExercises[i], state.unit, onEditSet = { set, type -> editing = set to type })
                     }
@@ -129,6 +134,35 @@ fun SessionDetailScreen(sessionId: Long, onBack: () -> Unit) {
             onConfirm = { confirmDelete = false; vm.delete(onBack) },
             onDismiss = { confirmDelete = false }
         )
+    }
+}
+
+/** Heart rate, calories and duration from the watch activity linked to this session, with a link to it. */
+@Composable
+private fun WatchActivityCard(activity: Activity, onOpen: () -> Unit) {
+    AppCard(borderColor = Tokens.AccentBorder, background = Tokens.AccentSurface, padding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("From your watch", style = MaterialTheme.typography.titleSmall, color = Tokens.Accent)
+            Text(activity.name, style = MaterialTheme.typography.bodySmall, color = Tokens.AccentText, maxLines = 1)
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WatchStat("Avg HR", activity.avgHr?.toString() ?: "?", "bpm", Modifier.weight(1f))
+            WatchStat("Max HR", activity.maxHr?.toString() ?: "?", "bpm", Modifier.weight(1f))
+            WatchStat("Calories", activity.calories?.toString() ?: "?", "kcal", Modifier.weight(1f))
+            WatchStat("Duration", Dates.hoursMinutes(activity.timerSeconds), null, Modifier.weight(1f))
+        }
+        GhostButton("Open activity", onOpen, Modifier.fillMaxWidth(), contentColor = Tokens.Accent, borderColor = Tokens.AccentBorder)
+    }
+}
+
+@Composable
+private fun WatchStat(label: String, value: String, unit: String?, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Tokens.AccentText)
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(value, style = MonoNumber.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold), color = Tokens.Text, maxLines = 1)
+            if (unit != null) Text(unit, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp), color = Tokens.AccentText, modifier = Modifier.padding(bottom = 1.dp))
+        }
     }
 }
 

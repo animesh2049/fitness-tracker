@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,11 +22,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -42,8 +46,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.animesh.fitnesstracker.backup.ImportMode
@@ -58,7 +65,7 @@ import com.animesh.fitnesstracker.util.Dates
 import android.net.Uri
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenWatch: () -> Unit = {}) {
     val container = appContainer()
     val vm: SettingsViewModel = viewModel { SettingsViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -144,6 +151,36 @@ fun SettingsScreen(onBack: () -> Unit) {
             }
 
             Gap()
+            SectionLabel("Watch")
+            AppCard(padding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
+                LinkRow("Garmin watch", state.watchName ?: "Not paired", onClick = onOpenWatch)
+            }
+
+            Gap()
+            SectionLabel("Health")
+            AppCard {
+                val effective = s.effectiveMaxHeartRate()
+                NumberRow(
+                    "Max heart rate", s.maxHeartRate, placeholder = "auto",
+                    valid = { it in 100..230 },
+                    onCommit = { v -> vm.update { it.copy(maxHeartRate = v) } }
+                )
+                NumberRow(
+                    "Birth year", s.birthYear, placeholder = "none",
+                    valid = { it in 1900..java.time.Year.now().value },
+                    onCommit = { v -> vm.update { it.copy(birthYear = v) } }
+                )
+                CounterRow("Step goal", String.format(java.util.Locale.US, "%,d", s.stepGoal),
+                    onMinus = { vm.update { it.copy(stepGoal = (it.stepGoal - 500).coerceAtLeast(1000)) } },
+                    onPlus = { vm.update { it.copy(stepGoal = (it.stepGoal + 500).coerceAtMost(50000)) } })
+                Text(
+                    if (s.maxHeartRate == null) "Heart rate zones use $effective bpm as your max: 220 minus your age, or 190 when the birth year is empty. Enter a max heart rate to override it."
+                    else "Heart rate zones use $effective bpm as your max. Clear the field to go back to 220 minus your age.",
+                    style = MaterialTheme.typography.bodySmall, color = Tokens.Muted
+                )
+            }
+
+            Gap()
             SectionLabel("Backup")
             AppCard {
                 SecondaryButton("Export all data (JSON)", { exportJson.launch("workout-backup-$today.json") }, Modifier.fillMaxWidth(), enabled = !state.backupBusy)
@@ -156,6 +193,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
                 val failed = state.backupStatus?.let { it.startsWith("Failed") || it.startsWith("Not a") || it.startsWith("Backup schema") } == true && !state.backupBusy
                 Text(status!!, style = MaterialTheme.typography.bodySmall, color = if (failed) Tokens.Danger else Tokens.Muted)
+                Text("Watch data (the raw FIT files) is exported separately from the Watch screen.", style = MaterialTheme.typography.bodySmall, color = Tokens.Dim)
             }
 
             Gap()
@@ -207,6 +245,53 @@ private fun StepButton(text: String, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Text(text, style = MaterialTheme.typography.headlineSmall, color = Tokens.Text)
+    }
+}
+
+/** A row that opens another screen: label, current value and a chevron. */
+@Composable
+private fun LinkRow(label: String, value: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = Tokens.Text, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.bodySmall, color = Tokens.Muted, maxLines = 1)
+        Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = Tokens.Dim, modifier = Modifier.size(20.dp))
+    }
+}
+
+/**
+ * Label with a small numeric field. An empty field commits null; a number commits only when [valid]
+ * accepts it, so half-typed values never reach the database.
+ */
+@Composable
+private fun NumberRow(label: String, value: Int?, placeholder: String, valid: (Int) -> Boolean, onCommit: (Int?) -> Unit) {
+    var text by remember(value) { mutableStateOf(value?.toString() ?: "") }
+    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = Tokens.Text, modifier = Modifier.weight(1f))
+        OutlinedTextField(
+            value = text,
+            onValueChange = { raw ->
+                val digits = raw.filter { it.isDigit() }.take(5)
+                text = digits
+                if (digits.isEmpty()) onCommit(null)
+                else digits.toIntOrNull()?.let { if (valid(it)) onCommit(it) }
+            },
+            modifier = Modifier.widthIn(min = 96.dp, max = 112.dp),
+            singleLine = true,
+            placeholder = { Text(placeholder, color = Tokens.Dim, style = MonoNumberLarge) },
+            textStyle = MonoNumberLarge.copy(textAlign = TextAlign.End, fontSize = 16.sp),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Tokens.Text, unfocusedTextColor = Tokens.Text,
+                focusedContainerColor = Tokens.Surface2, unfocusedContainerColor = Tokens.Surface2,
+                focusedBorderColor = Tokens.BorderStrong, unfocusedBorderColor = Tokens.Border,
+                cursorColor = Tokens.Accent
+            )
+        )
     }
 }
 

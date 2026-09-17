@@ -41,6 +41,8 @@ data class SetRow(val set: SessionSet, val text: String, val state: RowState, va
 enum class RowState { DONE_HIT, DONE_MISSED, CURRENT, UPCOMING }
 
 data class SummaryRow(val name: String, val detail: String, val hit: Boolean)
+/** Numbers from the watch activity linked to the finished session, when one was already synced. */
+data class WatchNumbers(val activityId: Long, val name: String, val avgHr: Int?, val maxHr: Int?, val calories: Int?, val duration: String)
 data class SessionSummary(
     val groupName: String,
     val dateLine: String,
@@ -49,7 +51,8 @@ data class SessionSummary(
     val volume: String,
     val records: Int,
     val rows: List<SummaryRow>,
-    val nextTime: List<String>
+    val nextTime: List<String>,
+    val watch: WatchNumbers? = null
 )
 
 data class SessionUi(
@@ -306,6 +309,8 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
             }
             c.sessions.finish(sessionId, notes, writeBackTargets = true)
             advanceCycle(before)
+            // A watch activity synced before the session was finished can now be matched to it (FR52).
+            runCatching { c.activities.linkUnlinked() }
             summary.value = buildSummary(before, settings, records)
         }
     }
@@ -348,9 +353,13 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
         }
         val completed = after.completedSets.filter { !it.isWarmup }
         val duration = after.session.endedAt?.let { Dates.formatDuration(it - after.session.startedAt) } ?: ""
+        val watch = runCatching { c.activities.observeForSession(sessionId).first().firstOrNull() }.getOrNull()?.let {
+            WatchNumbers(it.id, it.name, it.avgHr, it.maxHr, it.calories, Dates.hoursMinutes(it.timerSeconds))
+        }
         return SessionSummary(
             groupName = after.session.groupName, dateLine = Dates.shortDay(after.session.epochDay), duration = duration,
-            sets = completed.size, volume = Weights.formatVolume(after.volumeKg, unit), records = records, rows = rows, nextTime = nextTime
+            sets = completed.size, volume = Weights.formatVolume(after.volumeKg, unit), records = records, rows = rows, nextTime = nextTime,
+            watch = watch
         )
     }
 
