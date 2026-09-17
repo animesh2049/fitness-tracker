@@ -62,6 +62,12 @@ class WatchController(
         runCatching { context.startService(Intent(context, GarminSyncService::class.java).setAction(GarminSyncService.ACTION_CANCEL)) }
     }
 
+    /** Restores a pairing from a JSON backup (no bonding happens; the first sync re-bonds if needed). */
+    fun restore(info: WatchInfo) {
+        prefs.save(info.copy(firstConnectDone = false))
+        scheduleBackgroundSync(context, info.backgroundSyncHours)
+    }
+
     override suspend fun updateWatch(transform: (WatchInfo) -> WatchInfo) {
         val before = prefs.current ?: return
         val after = prefs.update(transform) ?: return

@@ -9,6 +9,7 @@ import com.animesh.fitnesstracker.backup.BackupCodec
 import com.animesh.fitnesstracker.backup.BackupFormatException
 import com.animesh.fitnesstracker.backup.CsvExport
 import com.animesh.fitnesstracker.backup.ImportMode
+import com.animesh.fitnesstracker.backup.WatchBackup
 import com.animesh.fitnesstracker.data.model.Settings
 import com.animesh.fitnesstracker.di.AppContainer
 import java.util.Locale
@@ -44,7 +45,8 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     }
 
     fun exportJson(uri: Uri) = runBackup {
-        val file = BackupCodec.snapshot(c.database, appVersion)
+        val watch = c.watch.currentWatch?.let { WatchBackup.from(it) }
+        val file = BackupCodec.snapshot(c.database, appVersion, watch)
         write(uri, BackupCodec.encode(file))
         "Exported ${count(file.rowCount)} rows to ${displayName(uri)}"
     }
@@ -59,6 +61,8 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
     fun importJson(uri: Uri, mode: ImportMode) = runBackup {
         val text = read(uri)
         val result = BackupCodec.import(c.database, text, mode)
+        // A restored pairing only fills in the watch details; imported health data comes from the FIT zip.
+        result.watch?.let { if (mode == ImportMode.REPLACE || c.watch.currentWatch == null) c.watch.restore(it.toWatchInfo()) }
         val verb = if (mode == ImportMode.REPLACE) "Replaced with" else "Merged"
         "$verb ${count(result.total)} rows from ${displayName(uri)}"
     }

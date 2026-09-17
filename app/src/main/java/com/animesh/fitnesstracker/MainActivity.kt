@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.animesh.fitnesstracker.garmin.sync.AutoSync
 import com.animesh.fitnesstracker.ui.navigation.FitnessApp
 import com.animesh.fitnesstracker.ui.theme.WorkoutTheme
 
@@ -25,6 +26,12 @@ class MainActivity : ComponentActivity() {
                 FitnessApp(startRoute = pendingRoute, onStartRouteConsumed = { pendingRoute = null })
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Version 0.3: sync the watch when the app comes back after an hour or more.
+        AutoSync.onAppForeground((application as FitnessApplication).container.watch)
     }
 
     override fun onNewIntent(intent: Intent) {
