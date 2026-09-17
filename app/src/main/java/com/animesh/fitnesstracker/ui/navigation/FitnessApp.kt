@@ -41,6 +41,7 @@ import com.animesh.fitnesstracker.ui.settings.SettingsRoutes
 import com.animesh.fitnesstracker.ui.settings.settingsGraph
 import com.animesh.fitnesstracker.ui.theme.Tokens
 import com.animesh.fitnesstracker.ui.today.TodayScreen
+import com.animesh.fitnesstracker.ui.watch.watchGraph
 
 /**
  * The three bottom tabs. Each is a hub: Workout opens on Today and carries the section row
@@ -114,6 +115,7 @@ fun FitnessApp(startRoute: String? = null, onStartRouteConsumed: () -> Unit = {}
             progressGraph(navController)
             planGraph(navController)
             settingsGraph(navController)
+            watchGraph(navController)
         }
     }
 }
