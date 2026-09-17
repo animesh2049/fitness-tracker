@@ -4,7 +4,16 @@ import android.content.Context
 import android.util.Log
 import com.animesh.fitnesstracker.data.AppDatabase
 import com.animesh.fitnesstracker.data.Seed
+import com.animesh.fitnesstracker.garmin.fitimport.FitArchive
+import com.animesh.fitnesstracker.garmin.fitimport.FitImporter
+import com.animesh.fitnesstracker.garmin.sync.FileRawFileStore
+import com.animesh.fitnesstracker.garmin.sync.RawFileStore
+import com.animesh.fitnesstracker.garmin.sync.WatchController
+import com.animesh.fitnesstracker.repository.ActivityRepository
 import com.animesh.fitnesstracker.repository.DietPlanRepository
+import com.animesh.fitnesstracker.repository.HealthRepository
+import com.animesh.fitnesstracker.repository.SyncedFileRepository
+import java.io.File
 import com.animesh.fitnesstracker.repository.DietSettingsRepository
 import com.animesh.fitnesstracker.repository.ExerciseRepository
 import com.animesh.fitnesstracker.repository.MealRepository
@@ -36,6 +45,16 @@ class AppContainer(val appContext: Context, val database: AppDatabase = AppDatab
     val dietSettings = DietSettingsRepository(database.dietSettingsDao())
     val timer = TimerController(appContext)
     val dietReminders = DietReminderScheduler(appContext, dietSettings, dietPlans)
+
+    // Garmin watch (version 0.3): raw FIT files on disk, the importer that turns them into health rows,
+    // the repositories the Health tab reads, and the Bluetooth controller that owns pairing and syncs.
+    val rawFiles: RawFileStore = FileRawFileStore(File(appContext.filesDir, "garmin"))
+    val fitImporter = FitImporter(database, rawFiles)
+    val fitArchive = FitArchive()
+    val health = HealthRepository(database)
+    val activities = ActivityRepository(database)
+    val syncedFiles = SyncedFileRepository(database)
+    val watch = WatchController(context = appContext, store = rawFiles, importHook = fitImporter, scope = appScope)
 
     init {
         appScope.launch { Seed.runIfNeeded(database) }
