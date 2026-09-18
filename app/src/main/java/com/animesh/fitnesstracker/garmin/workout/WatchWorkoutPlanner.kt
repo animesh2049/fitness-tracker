@@ -26,6 +26,7 @@ data class PlannerExercise(
 object WatchWorkoutPlanner {
     const val MAX_NAME_LENGTH = 30
     private val DAY = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
+    private val SHORT_DAY = java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH)
 
     /**
      * @param groupName the workout group, for example "Push day"
@@ -61,10 +62,20 @@ object WatchWorkoutPlanner {
         )
     }
 
-    /** "<Group> · <EEE d MMM>", cut to [MAX_NAME_LENGTH] characters so the watch's list shows it whole. */
+    /**
+     * "<Group> · <EEE d MMM>" when it fits [MAX_NAME_LENGTH]; otherwise the weekday is dropped, and if the
+     * group name alone is still too long it is cut so the date always survives ("Upper body hyper… · 17 Sep").
+     */
     fun name(groupName: String, epochDay: Long): String {
-        val full = "${groupName.trim()} · ${LocalDate.ofEpochDay(epochDay).format(DAY)}"
-        return if (full.length <= MAX_NAME_LENGTH) full else full.substring(0, MAX_NAME_LENGTH).trimEnd()
+        val date = LocalDate.ofEpochDay(epochDay)
+        val group = groupName.trim()
+        val full = "$group · ${date.format(DAY)}"
+        if (full.length <= MAX_NAME_LENGTH) return full
+        val shortDate = date.format(SHORT_DAY)
+        val withShortDate = "$group · $shortDate"
+        if (withShortDate.length <= MAX_NAME_LENGTH) return withShortDate
+        val room = MAX_NAME_LENGTH - shortDate.length - 3
+        return "${group.substring(0, room).trimEnd()} · $shortDate"
     }
 
     /** epochDay * 100 000 + groupId, never zero (the watch keys files by serial and creation time). */

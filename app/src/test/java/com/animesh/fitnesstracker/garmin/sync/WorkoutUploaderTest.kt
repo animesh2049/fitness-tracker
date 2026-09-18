@@ -189,16 +189,15 @@ class WorkoutUploaderTest {
     }
 
     @Test
-    fun `missing capability bit refuses before CREATE_FILE`() = runTest {
+    fun `missing capability bit is only a warning and CREATE_FILE decides`() = runTest {
+        // The real Forerunner 570 lists 15 file types without 128/5 and still stores workouts.
         val watch = FakeWatch(files(), backgroundScope, supportsWorkouts = false)
         val h = Harness(this, watch)
         val outcome = h.upload()
-        assertFalse(outcome.success)
-        assertEquals("The watch does not advertise workout download (capability 18 missing)", outcome.reason)
-        assertTrue(h.sent(GfdiId.CREATE_FILE).isEmpty())
-        assertTrue(h.sent(GfdiId.SET_FILE_FLAG).isEmpty())
-        assertTrue(watch.deleted.isEmpty())
-        assertTrue(h.states.last() is SyncState.Failed)
+        assertTrue(outcome.reason ?: "", outcome.success)
+        assertTrue(h.sent(GfdiId.CREATE_FILE).isNotEmpty())
+        assertTrue(h.logText().contains("capability 18), trying anyway"))
+        assertTrue(h.logText().contains("letting CREATE_FILE decide"))
         assertTrue(watch.closed)
     }
 

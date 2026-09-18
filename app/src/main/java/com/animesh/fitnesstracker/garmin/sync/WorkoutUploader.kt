@@ -61,13 +61,15 @@ class WorkoutUploader(
     }
 
     private fun checkCapabilities() {
+        // Neither signal is authoritative: the Forerunner 570 lists 15 file types without 128/5 yet still
+        // takes workouts, so both are logged as hints and CREATE_FILE's reply decides.
         val caps = responder.watchCapabilities
         if (caps != null && !Capabilities.has(caps, Capabilities.WORKOUT_DOWNLOAD)) {
-            throw SyncException("The watch does not advertise workout download (capability ${Capabilities.WORKOUT_DOWNLOAD} missing)")
+            log("Watch does not advertise workout download (capability ${Capabilities.WORKOUT_DOWNLOAD}), trying anyway")
         }
         when (responder.supportsFileType(FitFileType.DATA_TYPE_FIT, FitFileType.WORKOUT)) {
             true -> log("Watch accepts workout files (128/5)")
-            false -> throw SyncException("The watch did not list workout files (128/5) among its supported file types")
+            false -> log("Watch did not list workout files (128/5) among its supported file types, letting CREATE_FILE decide")
             null -> log("Watch never listed its file types, letting CREATE_FILE decide")
         }
     }

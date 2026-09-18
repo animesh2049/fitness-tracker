@@ -98,7 +98,7 @@ class Handshake(
             }
             is GfdiMessage.SupportedFileTypesStatus -> {
                 supportedTypes = msg.types
-                log("Watch supports ${msg.types.size} file types")
+                log("Watch supports ${msg.types.size} file types: " + msg.types.joinToString(", ") { "${it.dataType}/${it.subType} ${it.name}".trim() })
             }
             is GfdiMessage.GenericStatus -> if (msg.status != GfdiStatus.ACK) log("Watch answered ${msg.originalId} with status ${msg.status}")
             is GfdiMessage.ProtobufStatus -> if (msg.status != GfdiStatus.ACK || msg.chunkStatus != ProtobufChunkStatus.KEPT) {
