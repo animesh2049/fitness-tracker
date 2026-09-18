@@ -60,8 +60,9 @@ class WatchWorkoutPlannerTest {
     @Test
     fun `long group names are cut to 30 characters`() {
         val name = WatchWorkoutPlanner.name("Upper body hypertrophy block A", day)
-        assertEquals(30, name.length)
-        assertEquals("Upper body hypertrophy block A", name)
+        assertTrue(name.length <= 30)
+        assertEquals("Upper body hypertroph · 17 Sep", name)
+        assertEquals("Upper A (strength) · 17 Sep", WatchWorkoutPlanner.name("Upper A (strength)", day))
         val medium = WatchWorkoutPlanner.name("Upper body A", day)
         assertEquals("Upper body A · Thu 17 Sep", medium)
         assertTrue(WatchWorkoutPlanner.name("Push / pull / legs marathon", day).length <= 30)
