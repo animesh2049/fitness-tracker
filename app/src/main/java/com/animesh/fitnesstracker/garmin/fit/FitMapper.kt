@@ -29,7 +29,19 @@ private class Fields(private val rec: RawRecord) {
         else -> null
     }
 
-    fun string(num: Int): String? = rec.fields[num] as? String
+    /** First string of the field: a scalar string, or the first element of a string array. */
+    fun string(num: Int): String? = when (val v = rec.fields[num]) {
+        is String -> v
+        is List<*> -> v.firstOrNull { it is String } as? String
+        else -> null
+    }
+
+    /** Every string of the field; a scalar becomes a one-element list. */
+    fun strings(num: Int): List<String> = when (val v = rec.fields[num]) {
+        is String -> listOf(v)
+        is List<*> -> v.filterIsInstance<String>()
+        else -> emptyList()
+    }
 
     /** Array field as doubles; a scalar becomes a one-element list, invalid elements become 0.0 to keep positions. */
     fun doubles(num: Int): List<Double> = when (val v = rec.fields[num]) {
@@ -75,6 +87,9 @@ private class TypedRecords {
     private val sports = ArrayList<SportRec>()
     private val activity = ArrayList<ActivityRec>()
     private val workouts = ArrayList<WorkoutRec>()
+    private val workoutSteps = ArrayList<WorkoutStepRec>()
+    private val exerciseTitles = ArrayList<ExerciseTitleRec>()
+    private val sets = ArrayList<SetRec>()
     private val capabilities = ArrayList<CapabilitiesRec>()
 
     /** Garmin-epoch seconds of the last monitoring record, the base for `timestamp_16`. */
@@ -91,7 +106,19 @@ private class TypedRecords {
             Mesg.LAP -> lap(f)
             Mesg.RECORD -> record(f)
             Mesg.EVENT -> f.long(253)?.let { events += EventRec(it, f.int(0), f.int(1), f.long(3)) }
-            Mesg.WORKOUT -> workouts += WorkoutRec(f.string(8), f.int(4))
+            Mesg.WORKOUT -> workouts += WorkoutRec(f.string(8), f.int(4), f.int(11), f.int(6), f.long(5), f.int(254))
+            Mesg.WORKOUT_STEP -> workoutSteps += WorkoutStepRec(
+                messageIndex = f.int(254), name = f.string(0), durationType = f.int(1), durationValue = f.long(2), targetType = f.int(3),
+                targetValue = f.long(4), customTargetValueLow = f.long(5), customTargetValueHigh = f.long(6), intensity = f.int(7),
+                notes = f.string(8), equipment = f.int(9), exerciseCategory = f.int(10), exerciseName = f.int(11),
+                exerciseWeightKg = f.double(12), weightDisplayUnit = f.int(13)
+            )
+            Mesg.EXERCISE_TITLE -> exerciseTitles += ExerciseTitleRec(f.int(254), f.int(0), f.int(1), f.strings(2))
+            Mesg.SET -> sets += SetRec(
+                timestamp = f.long(254) ?: f.long(253), durationSeconds = f.double(0), repetitions = f.int(3), weightKg = f.double(4),
+                setType = f.int(5), startTime = f.long(6), category = f.ints(7), categorySubtype = f.ints(8), weightDisplayUnit = f.int(9),
+                messageIndex = f.int(10), wktStepIndex = f.int(11)
+            )
             Mesg.ACTIVITY -> activity += ActivityRec(f.long(253), f.long(5), f.int(1), f.double(0), f.string(8))
             Mesg.MONITORING -> monitoring(f)
             Mesg.MONITORING_INFO -> f.long(253)?.let { monitoringInfo += MonitoringInfoRec(it, f.int(5)) }
@@ -239,7 +266,8 @@ private class TypedRecords {
         hillScores = hillScores, enduranceScores = enduranceScores, trainingReadiness = trainingReadiness,
         functionalMetrics = functionalMetrics, recovery = recovery, maxMet = maxMet, deviceStatus = deviceStatus, sessions = sessions,
         laps = laps, records = records, timeInZone = timeInZone, physiologicalMetrics = physiologicalMetrics, userProfile = userProfile,
-        sports = sports, activity = activity, workouts = workouts, capabilities = capabilities, raw = parsed.records,
+        sports = sports, activity = activity, workouts = workouts, workoutSteps = workoutSteps, exerciseTitles = exerciseTitles,
+        sets = sets, capabilities = capabilities, raw = parsed.records,
         unknownMessageCount = parsed.unknownMessageCount, unknownFieldCount = parsed.unknownFieldCount
     )
 }
