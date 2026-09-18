@@ -63,6 +63,10 @@ Set the watch up on the watch itself and never pair it with Garmin Connect. In t
 
 Upgrading from 0.2 is an in-place install (same package); the database migrates itself. Health data is not part of the JSON backup because of its size; move it between phones with the watch zip.
 
+## Version 0.4: session navigation and workouts on the watch
+
+In a session the previous and next arrows, the progress segments and the Today's list move between exercises in any state; Skip only marks an exercise and can be undone with Resume. The rest timer shows the current exercise with its set progress and lets you peek at the others while it keeps running. On the Today screen, Send to watch turns the day's plan into a Garmin workout file (rep sets, timed sets, warm-ups, rests, supersets, exercise names from Garmin's catalogue or a custom title) and uploads it over Bluetooth; the watch lists it under Training, Workouts, and the next send replaces it. Save file instead writes the same file for copying into the watch's `GARMIN/NewFiles` folder over USB.
+
 ## Upgrading from Workout Tracker 0.1
 
 Version 0.2 renamed the package, so it installs as a separate app. Export a JSON backup from the old app, install this one, import the backup with "Replace everything", then uninstall the old app. A version 1 backup restores the workout data and leaves the starter meals in place.
