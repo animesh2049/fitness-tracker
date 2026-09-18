@@ -19,11 +19,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 /**
- * One complete sync: connect (30 s), bring up the GFDI link, run the [Handshake] (20 s), run
- * [FileSync] (60 s of silence per file), hand the new files to the [ImportHook], disconnect. Every step is
- * logged to [SyncLog]; progress goes to the `onState` callback of [run]. Cancelling the calling coroutine
- * tears the connection down cleanly. Timeouts and transport pieces are injectable so the whole session
- * runs against a fake watch in unit tests.
+ * One complete session with the watch: connect (30 s), bring up the GFDI link, run the [Handshake]
+ * (20 s), then either [run] the download sync ([FileSync] with 60 s of silence per file, then the
+ * [ImportHook]) or [runUpload] a workout push ([WorkoutUploader]), then disconnect. The two never share a
+ * connection, so an upload can never interleave with a download. Every step is logged to [SyncLog];
+ * progress goes to the `onState` callback. Cancelling the calling coroutine tears the connection down
+ * cleanly. Timeouts and transport pieces are injectable so the whole session runs against a fake watch
+ * in unit tests.
  */
 class SyncSession(
     private val transportFactory: (address: String, scope: CoroutineScope) -> Transport,
@@ -36,7 +38,8 @@ class SyncSession(
     private val connectTimeoutMs: Long = 30_000,
     private val handshakeTimeoutMs: Long = Handshake.TIMEOUT_MS,
     private val fileSilenceMs: Long = 60_000,
-    private val requestReliable: Boolean = true
+    private val requestReliable: Boolean = true,
+    private val uploadSilenceMs: Long = 30_000
 ) {
     data class Outcome(
         val success: Boolean,
@@ -45,15 +48,65 @@ class SyncSession(
         val importSummary: ImportSummary? = null,
         val unitId: Long? = null,
         val firmwareVersion: String? = null,
-        val batteryPercent: Int? = null
+        val batteryPercent: Int? = null,
+        /** Watch index of the workout file written by [runUpload], null for a download sync or a failed upload. */
+        val uploadedIndex: Int? = null,
+        val uploadedBytes: Int = 0,
+        val uploadDurationMs: Long = 0
     )
 
+    /** What [runUpload] pushes: the encoded FIT bytes, the workout name and the index of the previous push to delete. */
+    data class WorkoutUpload(val bytes: ByteArray, val name: String, val previousIndex: Int?)
+
+    private class Connected(val endpoint: GfdiEndpoint, val handshake: Handshake)
+
+    /** Download sync: list, download new files, import them. */
     suspend fun run(watch: WatchInfo, firstConnect: Boolean, onState: suspend (SyncState) -> Unit): Outcome {
         log.log("Sync started for ${watch.name} (${watch.macAddress})" + if (firstConnect) ", first connect" else "")
-        var handshake: Handshake? = null
         var newFiles: List<StoredFile> = emptyList()
+        return session(watch, firstConnect, "Sync", onState, onFailure = { Outcome(success = false, newFiles = newFiles) }) { c ->
+            val sync = FileSync(c.endpoint, c.handshake, store, log::log, fileSilenceMs, zone)
+            newFiles = sync.run(onState)
+            onState(SyncState.Importing)
+            val summary = if (newFiles.isEmpty()) null else importHook.importFiles(newFiles)
+            if (summary != null) {
+                log.log("Imported ${summary.filesImported} file(s), ${summary.filesFailed} failed" +
+                    if (summary.errors.isEmpty()) "" else ": " + summary.errors.take(3).joinToString("; "))
+            }
+            onState(SyncState.Done(newFiles.size, clock()))
+            Outcome(success = true, newFiles = newFiles, importSummary = summary)
+        }
+    }
+
+    /** Workout push: delete the previous push, upload the new file, tell the watch the sync is complete. */
+    suspend fun runUpload(watch: WatchInfo, firstConnect: Boolean, upload: WorkoutUpload, onState: suspend (SyncState) -> Unit): Outcome {
+        log.log("Workout push started for ${watch.name} (${watch.macAddress}): ${upload.name}" + if (firstConnect) ", first connect" else "")
+        return session(watch, firstConnect, "Workout push", onState, onFailure = { Outcome(success = false) }) { c ->
+            onState(SyncState.Uploading(0, upload.bytes.size, upload.name))
+            val uploader = WorkoutUploader(c.endpoint, c.handshake, log::log, uploadSilenceMs, clock)
+            val result = uploader.upload(upload.bytes, upload.name, upload.previousIndex) { sent, total ->
+                onState(SyncState.Uploading(sent, total, upload.name))
+            }
+            onState(SyncState.Done(0, clock(), uploadedWorkout = upload.name))
+            Outcome(success = true, uploadedIndex = result.fileIndex, uploadedBytes = result.bytesSent, uploadDurationMs = result.durationMs)
+        }
+    }
+
+    /**
+     * Connects, handshakes, runs [body], disconnects. Success comes from [body]; failures are logged as
+     * "<what> failed: reason" and reported through [onFailure] (filled in with the handshake facts).
+     */
+    private suspend fun session(
+        watch: WatchInfo,
+        firstConnect: Boolean,
+        what: String,
+        onState: suspend (SyncState) -> Unit,
+        onFailure: () -> Outcome,
+        body: suspend (Connected) -> Outcome
+    ): Outcome {
+        var handshake: Handshake? = null
         try {
-            val summary = coroutineScope {
+            val outcome = coroutineScope {
                 val transport = transportFactory(watch.macAddress, this)
                 var link: GfdiLink? = null
                 var pump: Job? = null
@@ -84,15 +137,7 @@ class SyncSession(
                     val hs = Handshake(endpoint::send, phone, firstConnect, clock, zone, log::log)
                     handshake = hs
                     runHandshake(endpoint, hs)
-                    val sync = FileSync(endpoint, hs, store, log::log, fileSilenceMs, zone)
-                    newFiles = sync.run(onState)
-                    onState(SyncState.Importing)
-                    val summary = if (newFiles.isEmpty()) null else importHook.importFiles(newFiles)
-                    if (summary != null) {
-                        log.log("Imported ${summary.filesImported} file(s), ${summary.filesFailed} failed" +
-                            if (summary.errors.isEmpty()) "" else ": " + summary.errors.take(3).joinToString("; "))
-                    }
-                    summary
+                    body(Connected(endpoint, hs))
                 } finally {
                     pump?.cancel()
                     watcher?.cancel()
@@ -100,23 +145,21 @@ class SyncSession(
                     transport.close()
                 }
             }
-            onState(SyncState.Done(newFiles.size, clock()))
             log.log("Disconnected")
-            return Outcome(
-                success = true, newFiles = newFiles, importSummary = summary,
+            return outcome.copy(
                 unitId = handshake?.deviceInfo?.unitNumber, firmwareVersion = handshake?.deviceInfo?.softwareVersionString,
                 batteryPercent = handshake?.batteryPercent
             )
         } catch (e: CancellationException) {
-            log.log("Sync cancelled")
+            log.log("$what cancelled")
             onState(SyncState.Idle)
             throw e
         } catch (e: Exception) {
             val reason = e.message ?: e.javaClass.simpleName
-            log.log("Sync failed: $reason")
+            log.log("$what failed: $reason")
             onState(SyncState.Failed(reason, clock()))
-            return Outcome(
-                success = false, reason = reason, newFiles = newFiles,
+            return onFailure().copy(
+                reason = reason,
                 unitId = handshake?.deviceInfo?.unitNumber, firmwareVersion = handshake?.deviceInfo?.softwareVersionString,
                 batteryPercent = handshake?.batteryPercent
             )

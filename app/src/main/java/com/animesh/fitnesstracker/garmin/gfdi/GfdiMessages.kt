@@ -4,7 +4,9 @@ package com.animesh.fitnesstracker.garmin.gfdi
 object GfdiId {
     const val RESPONSE = 5000
     const val DOWNLOAD_REQUEST = 5002
+    const val UPLOAD_REQUEST = 5003
     const val FILE_TRANSFER_DATA = 5004
+    const val CREATE_FILE = 5005
     const val FILTER = 5007
     const val SET_FILE_FLAG = 5008
     const val FILE_AVAILABLE = 5009
@@ -44,6 +46,37 @@ object DownloadStatus {
     const val CRC_INCORRECT = 6
 }
 
+/** `uploadStatus` byte of the RESPONSE to UPLOAD_REQUEST (5003). */
+object UploadStatus {
+    const val OK = 0
+    const val INDEX_UNKNOWN = 1
+    const val INDEX_NOT_WRITEABLE = 2
+    const val NO_SPACE_LEFT = 3
+    const val INVALID = 4
+    const val NOT_READY = 5
+    const val CRC_INCORRECT = 6
+
+    fun name(v: Int): String = when (v) {
+        OK -> "OK"; INDEX_UNKNOWN -> "INDEX_UNKNOWN"; INDEX_NOT_WRITEABLE -> "INDEX_NOT_WRITEABLE"; NO_SPACE_LEFT -> "NO_SPACE_LEFT"
+        INVALID -> "INVALID"; NOT_READY -> "NOT_READY"; CRC_INCORRECT -> "CRC_INCORRECT"; else -> "status $v"
+    }
+}
+
+/** `createStatus` byte of the RESPONSE to CREATE_FILE (5005). */
+object CreateStatus {
+    const val OK = 0
+    const val DUPLICATE = 1
+    const val NO_SPACE = 2
+    const val UNSUPPORTED = 3
+    const val NO_SLOTS = 4
+    const val NO_SPACE_FOR_TYPE = 5
+
+    fun name(v: Int): String = when (v) {
+        OK -> "OK"; DUPLICATE -> "DUPLICATE"; NO_SPACE -> "NO_SPACE"; UNSUPPORTED -> "UNSUPPORTED"
+        NO_SLOTS -> "NO_SLOTS"; NO_SPACE_FOR_TYPE -> "NO_SPACE_FOR_TYPE"; else -> "status $v"
+    }
+}
+
 object TransferStatus {
     const val OK = 0
     const val RESEND = 1
@@ -51,6 +84,11 @@ object TransferStatus {
     const val CRC_MISMATCH = 3
     const val OFFSET_MISMATCH = 4
     const val SYNC_PAUSED = 5
+
+    fun name(v: Int): String = when (v) {
+        OK -> "OK"; RESEND -> "RESEND"; ABORT -> "ABORT"; CRC_MISMATCH -> "CRC_MISMATCH"; OFFSET_MISMATCH -> "OFFSET_MISMATCH"
+        SYNC_PAUSED -> "SYNC_PAUSED"; else -> "status $v"
+    }
 }
 
 object SystemEvent {
@@ -67,6 +105,13 @@ object SystemEvent {
 object FileFlag {
     const val ARCHIVE = 0x10
     const val DELETE = 0x20
+}
+
+/** FIT file types the watch stores as `dataType 128 / subType`. */
+object FitFileType {
+    const val DATA_TYPE_FIT = 128
+    const val ACTIVITY = 4
+    const val WORKOUT = 5
 }
 
 object ProtobufChunkStatus {
@@ -147,6 +192,22 @@ sealed class GfdiMessage {
 
     data class SetFileFlagStatus(val status: Int, val flagsStatus: Int, val index: Int, val flags: Int) : GfdiMessage() {
         override val id: Int get() = GfdiId.RESPONSE
+    }
+
+    /** RESPONSE to CREATE_FILE (5005): the watch's verdict and the index it assigned to the new file. */
+    data class CreateFileStatus(
+        val status: Int, val createStatus: Int, val fileIndex: Int, val dataType: Int, val subType: Int, val number: Int
+    ) : GfdiMessage() {
+        override val id: Int get() = GfdiId.RESPONSE
+        val ok: Boolean get() = status == GfdiStatus.ACK && createStatus == CreateStatus.OK
+    }
+
+    /** RESPONSE to UPLOAD_REQUEST (5003): where the watch wants us to start and the running CRC to seed with. */
+    data class UploadRequestStatus(
+        val status: Int, val uploadStatus: Int, val offset: Long, val maxSize: Long, val crcSeed: Int
+    ) : GfdiMessage() {
+        override val id: Int get() = GfdiId.RESPONSE
+        val ok: Boolean get() = status == GfdiStatus.ACK && uploadStatus == UploadStatus.OK
     }
 
     data class SupportedFileTypesStatus(val status: Int, val types: List<FileTypeInfo>) : GfdiMessage() {
@@ -277,6 +338,8 @@ object GfdiParser {
                 GfdiId.DOWNLOAD_REQUEST -> GfdiMessage.DownloadRequestStatus(status, r.u8(), r.u32())
                 GfdiId.FILE_TRANSFER_DATA -> GfdiMessage.FileTransferDataStatus(status, r.u8(), r.u32())
                 GfdiId.SET_FILE_FLAG -> GfdiMessage.SetFileFlagStatus(status, r.u8(), r.u16(), r.u8())
+                GfdiId.CREATE_FILE -> GfdiMessage.CreateFileStatus(status, r.u8(), r.u16(), r.u8(), r.u8(), r.u16())
+                GfdiId.UPLOAD_REQUEST -> GfdiMessage.UploadRequestStatus(status, r.u8(), r.u32(), r.u32(), r.u16())
                 GfdiId.SUPPORTED_FILE_TYPES_REQUEST -> {
                     if (status != GfdiStatus.ACK) return GfdiMessage.SupportedFileTypesStatus(status, emptyList())
                     val n = r.u8()

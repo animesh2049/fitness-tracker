@@ -1,5 +1,6 @@
 package com.animesh.fitnesstracker.garmin.sync
 
+import com.animesh.fitnesstracker.garmin.workout.EncodedWorkout
 import java.io.File
 import kotlinx.coroutines.flow.Flow
 
@@ -16,7 +17,10 @@ sealed class SyncState {
     data object Listing : SyncState()
     data class Downloading(val done: Int, val total: Int, val fileLabel: String) : SyncState()
     data object Importing : SyncState()
-    data class Done(val newFiles: Int, val finishedAtMillis: Long) : SyncState()
+    /** A workout file is being pushed to the watch; [label] is the workout name. */
+    data class Uploading(val sentBytes: Int, val totalBytes: Int, val label: String) : SyncState()
+    /** [uploadedWorkout] is the workout name when the run was a workout push rather than a download sync. */
+    data class Done(val newFiles: Int, val finishedAtMillis: Long, val uploadedWorkout: String? = null) : SyncState()
     data class Failed(val reason: String, val failedAtMillis: Long) : SyncState()
 
     val isRunning: Boolean get() = this !is Idle && this !is Done && this !is Failed
@@ -84,7 +88,11 @@ data class WatchInfo(
     val autoSyncOnOpen: Boolean = true,
     /** 0 disables background sync; otherwise the WorkManager interval in hours. */
     val backgroundSyncHours: Int = 0,
-    val keepConnectedDuringSessions: Boolean = false
+    val keepConnectedDuringSessions: Boolean = false,
+    /** Watch directory index of the workout file last pushed by "Send to watch"; deleted before the next push. */
+    val lastPushedWorkoutIndex: Int? = null,
+    val lastPushedWorkoutName: String? = null,
+    val lastPushedAtMillis: Long? = null
 )
 
 /** One line of the sync log shown on the Watch screen. */
@@ -104,4 +112,10 @@ interface WatchGateway {
     suspend fun updateWatch(transform: (WatchInfo) -> WatchInfo)
     /** Removes the pairing (and the Android bond when possible). Imported data is untouched. */
     suspend fun forgetWatch()
+    /**
+     * Pushes an encoded workout FIT file to the watch in the foreground service, replacing the one pushed
+     * last time. Returns false (with the reason in the log) when no watch is paired, a sync is running or
+     * the Bluetooth permission is missing; progress then arrives through [syncState] as [SyncState.Uploading].
+     */
+    fun requestWorkoutUpload(encoded: EncodedWorkout, planName: String): Boolean
 }
