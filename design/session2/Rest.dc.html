@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; padding: 24px 20px 20px; box-sizing: border-box; gap: 16px;">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Rest · Push day</div>
+    <div class="mono" style="font-size: 12px; color: #8b9096;">Exercise {{curPos}} of 5</div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 12px 0 4px;">
+    <div class="mono" style="font-size: 88px; font-weight: 600; line-height: 1; letter-spacing: -0.02em;">{{restText}}</div>
+    <div style="width: 100%; height: 6px; background: #1f2226; border-radius: 3px; overflow: hidden;">
+      <div style="{{barStyle}}"></div>
+    </div>
+    <div style="display: flex; gap: 10px; width: 100%;">
+      <button onClick="{{addRest}}" style="flex: 1 1 0; height: 52px; border-radius: 12px; background: #17191c; color: #ecedee; border: 1px solid #24272c; font-size: 16px; font-weight: 500;">+30 s</button>
+      <button onClick="{{skipRest}}" style="flex: 1 1 0; height: 52px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 16px; font-weight: 600;">Skip rest</button>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 0 4px;">{{cardLabel}}</div>
+    <div style="display: flex; align-items: stretch; gap: 8px;">
+      <button onClick="{{prev}}" aria-label="Previous exercise" style="{{prevStyle}}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+      </button>
+      <div style="{{cardStyle}}">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{viewName}}</div>
+          <sc-if value="{{viewAdded}}" hint-placeholder-val="{{ false }}">
+            <div style="height: 20px; padding: 0 8px; border-radius: 10px; border: 1px solid #33421a; color: #c8f03c; font-size: 11px; font-weight: 600; display: flex; align-items: center; white-space: nowrap;">Added today</div>
+          </sc-if>
+        </div>
+        <div class="mono" style="font-size: 14px; color: #b4b8bd;">{{viewNext}}</div>
+        <div style="display: flex; gap: 4px; padding-top: 2px;">
+          <sc-for list="{{viewSets}}" as="s" hint-placeholder-count="3">
+            <div style="{{s.style}}"></div>
+          </sc-for>
+        </div>
+        <div style="font-size: 12px; color: #8b9096;">{{viewMeta}}</div>
+      </div>
+      <button onClick="{{next}}" aria-label="Next exercise" style="{{nextStyle}}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+    </div>
+    <sc-if value="{{peeking}}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{goHere}}" style="height: 48px; border-radius: 12px; background: transparent; color: #c8f03c; border: 1px solid #33421a; font-size: 15px; font-weight: 600;">Continue with {{viewName}} after this rest</button>
+    </sc-if>
+    <sc-if value="{{notPeeking}}" hint-placeholder-val="{{ true }}">
+      <div style="font-size: 12px; color: #6b7076; text-align: center; padding: 6px 0;">Arrows peek at the other exercises; the timer keeps running.</div>
+    </sc-if>
+  </div>
+
+  <div style="flex-grow: 1;"></div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px;">
+    <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 0 4px;">Today's list</div>
+    <sc-for list="{{list}}" as="l" hint-placeholder-count="5">
+      <div onClick="{{l.pick}}" style="{{l.style}}">
+        <div style="{{l.dot}}"></div>
+        <div style="flex-grow: 1; font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{l.name}}</div>
+        <div class="mono" style="font-size: 12px; color: #8b9096; white-space: nowrap;">{{l.meta}}</div>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const EX = [
+  { name: 'Bench press', done: 3, total: 3, target: '8 × 62.5 kg', added: false },
+  { name: 'Overhead press', done: 1, total: 3, target: '10 × 27.5 kg', added: false },
+  { name: 'Incline dumbbell press', done: 0, total: 3, target: '11 × 22.5 kg', added: false },
+  { name: 'Face pull', done: 0, total: 3, target: '15 × 15 kg', added: true },
+  { name: 'Triceps pushdown', done: 0, total: 3, target: '12 × 25 kg', added: false }
+];
+const CURRENT = 1;
+class Component extends DCLogic {
+  state = { rest: 74, total: 90, view: CURRENT };
+  componentDidMount() { this.timer = setInterval(() => { const r = this.state.rest; if (r <= 0) return; this.setState({ rest: r - 1 }); }, 1000); }
+  componentWillUnmount() { if (this.timer) clearInterval(this.timer); }
+  renderVals() {
+    const st = this.state;
+    const v = EX[st.view];
+    const peeking = st.view !== CURRENT;
+    const m = Math.floor(st.rest / 60), s = st.rest % 60;
+    const arrow = (enabled) => 'width: 44px; border-radius: 12px; background: #17191c; border: 1px solid #24272c; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: ' + (enabled ? '#ecedee' : '#3a3e44') + ';';
+    const setPips = (x) => Array.from({ length: x.total }, (_, k) => ({ style: 'flex: 1 1 0; height: 5px; border-radius: 3px; background: ' + (k < x.done ? '#c8f03c' : (k === x.done && !peeking ? '#6f8a1c' : '#1f2226')) + ';' }));
+    const meta = (x, k) => (x.done === x.total ? 'All sets done' : (x.done + ' of ' + x.total + ' sets done'));
+    return {
+      curPos: CURRENT + 1,
+      restText: m + ':' + (s < 10 ? '0' + s : s),
+      barStyle: 'height: 100%; background: #c8f03c; border-radius: 3px; width: ' + Math.round((st.rest / st.total) * 100) + '%;',
+      addRest: () => this.setState({ rest: st.rest + 30, total: st.total + 30 }),
+      skipRest: () => this.setState({ rest: 0 }),
+      cardLabel: peeking ? (st.view < CURRENT ? 'Earlier' : 'Later') : 'Up next',
+      cardStyle: 'flex-grow: 1; min-width: 0; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; background: ' + (peeking ? '#17191c' : '#161b0d') + '; border: 1px solid ' + (peeking ? '#24272c' : '#33421a') + ';',
+      viewName: v.name, viewAdded: v.added,
+      viewNext: peeking ? 'Target ' + v.target : 'Set ' + (v.done + 1) + ' of ' + v.total + ' · ' + v.target,
+      viewSets: setPips(v), viewMeta: meta(v),
+      prev: () => this.setState({ view: Math.max(0, st.view - 1) }),
+      next: () => this.setState({ view: Math.min(EX.length - 1, st.view + 1) }),
+      prevStyle: arrow(st.view > 0), nextStyle: arrow(st.view < EX.length - 1),
+      peeking, notPeeking: !peeking,
+      goHere: () => this.setState({ view: st.view }),
+      list: EX.map((x, k) => ({
+        name: x.name, meta: k === CURRENT ? 'now' : meta(x),
+        dot: 'width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; background: ' + (x.done === x.total ? '#c8f03c' : (k === CURRENT ? '#6f8a1c' : '#2c3036')) + ';',
+        style: 'display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 12px; border-radius: 10px; cursor: pointer; box-sizing: border-box; background: ' + (k === st.view ? '#17191c' : 'transparent') + '; border: 1px solid ' + (k === st.view ? '#2c3036' : '#1f2226') + ';',
+        pick: () => this.setState({ view: k })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>
