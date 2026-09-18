@@ -12,6 +12,7 @@ import com.animesh.fitnesstracker.di.AppContainer
 import com.animesh.fitnesstracker.domain.LoggedSet
 import com.animesh.fitnesstracker.domain.cycle.CycleEngine
 import com.animesh.fitnesstracker.domain.cycle.CycleState
+import com.animesh.fitnesstracker.domain.planner.SessionCursor
 import com.animesh.fitnesstracker.domain.planner.SessionFlow
 import com.animesh.fitnesstracker.domain.planner.SessionPlanner
 import com.animesh.fitnesstracker.domain.planner.Step
@@ -40,6 +41,30 @@ data class SetEdit(val setId: Long, val reps: Int?, val weightKg: Double?, val s
 data class SetRow(val set: SessionSet, val text: String, val state: RowState, val badge: String)
 enum class RowState { DONE_HIT, DONE_MISSED, CURRENT, UPCOMING }
 
+/** One row of "Today's list" and one progress segment: where each exercise of the session stands. */
+data class ExerciseState(
+    val id: Long,
+    val name: String,
+    val done: Int,
+    val total: Int,
+    val skipped: Boolean,
+    val isCurrent: Boolean,
+    /** Index of the first unlogged set, null when the exercise is complete or skipped. */
+    val nextSetIndex: Int?,
+    /** Target of the next set, or of the last set when the exercise is complete. */
+    val target: String
+) {
+    val complete: Boolean get() = !skipped && total > 0 && done >= total
+    val started: Boolean get() = done > 0
+    /** "3 of 3 sets done", "Skipped" or "3 sets · not started". */
+    val stateText: String
+        get() = when {
+            skipped -> "Skipped"
+            started -> "$done of $total sets done"
+            else -> "$total sets · not started"
+        }
+}
+
 data class SummaryRow(val name: String, val detail: String, val hit: Boolean)
 /** Numbers from the watch activity linked to the finished session, when one was already synced. */
 data class WatchNumbers(val activityId: Long, val name: String, val avgHr: Int?, val maxHr: Int?, val calories: Int?, val duration: String)
@@ -58,31 +83,51 @@ data class SessionSummary(
 data class SessionUi(
     val session: SessionWithExercises? = null,
     val steps: List<Step> = emptyList(),
+    /** The first unlogged set of the exercise on screen, null when it is complete or skipped. */
     val current: Step? = null,
+    /** The exercise the cursor points at. */
     val exercise: SessionExerciseWithSets? = null,
     val exerciseIndex: Int = 0,
     val exerciseCount: Int = 0,
-    val doneExercises: Int = 0,
+    val canGoPrevious: Boolean = false,
+    val canGoNext: Boolean = false,
+    val cursorSkipped: Boolean = false,
+    /** True when the exercise on screen has no unlogged set left (and is not skipped). */
+    val cursorComplete: Boolean = false,
+    val exerciseStates: List<ExerciseState> = emptyList(),
     val lastTime: String = "",
     val rows: List<SetRow> = emptyList(),
     val edit: SetEdit? = null,
     val targetText: String = "",
+    /** True when every set of the session is logged or skipped. */
     val allDone: Boolean = false,
     val countdown: Countdown? = null,
     val now: Long = 0,
     val unit: WeightUnit = WeightUnit.KG,
     val settings: Settings = Settings(),
     val summary: SessionSummary? = null,
-    val nextLabel: String = ""
+    /** Live text for what follows the current step, computed from state rather than frozen in the countdown. */
+    val upNext: String = "",
+    /** Session exercise id the "Next: ..." button jumps to; null means "Finish session". */
+    val upNextExerciseId: Long? = null,
+    /** While resting: index of the exercise the overlay card is peeking at, null when it shows the cursor. */
+    val peekIndex: Int? = null
 ) {
     val resting: Boolean get() = countdown?.kind == TimerKind.REST
     val remaining: Int get() = countdown?.remainingSeconds(now) ?: 0
     val isTimed: Boolean get() = exercise?.exercise?.exerciseType == ExerciseType.TIMED
+    val currentState: ExerciseState? get() = exerciseStates.getOrNull(exerciseIndex)
 }
 
 class SessionViewModel(private val c: AppContainer, private val sessionId: Long) : ViewModel() {
     private val edit = MutableStateFlow<SetEdit?>(null)
     private val summary = MutableStateFlow<SessionSummary?>(null)
+    /** Session exercise id (not an index) of the exercise on screen; null resolves to the first unlogged set. */
+    private val cursor = MutableStateFlow<Long?>(null)
+    /** Session exercise id the rest overlay is peeking at; null shows the cursor exercise. */
+    private val peek = MutableStateFlow<Long?>(null)
+
+    private data class Local(val edit: SetEdit?, val summary: SessionSummary?, val cursor: Long?, val peek: Long?)
 
     private val _records = MutableSharedFlow<List<RecordKind>>(extraBufferCapacity = 4)
     /** Records beaten by the set that was just logged (for the celebration). */
@@ -95,9 +140,10 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
     private var timedSetId: Long? = null
 
     val state: StateFlow<SessionUi> = combine(
-        c.sessions.observeSession(sessionId), c.settings.observe(), c.timer.countdown, c.timer.now, combine(edit, summary) { e, s -> e to s }
-    ) { session, settings, countdown, now, (edit, summary) ->
-        build(session, settings, countdown, now, edit, summary)
+        c.sessions.observeSession(sessionId), c.settings.observe(), c.timer.countdown, c.timer.now,
+        combine(edit, summary, cursor, peek) { e, s, cur, p -> Local(e, s, cur, p) }
+    ) { session, settings, countdown, now, local ->
+        build(session, settings, countdown, now, local)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SessionUi())
 
     init {
@@ -106,14 +152,15 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
         }
     }
 
-    private suspend fun build(session: SessionWithExercises?, settings: Settings, countdown: Countdown?, now: Long, edit: SetEdit?, summary: SessionSummary?): SessionUi {
+    private suspend fun build(session: SessionWithExercises?, settings: Settings, countdown: Countdown?, now: Long, local: Local): SessionUi {
+        val (edit, summary, cursorId, peekId) = local
         if (session == null) return SessionUi(settings = settings, unit = settings.unit, summary = summary)
         val exercises = session.sortedExercises
         val steps = SessionFlow.steps(exercises)
-        val current = SessionFlow.current(steps)
-        val exercise = current?.let { exercises[it.exerciseIndex] }
+        val exerciseIndex = SessionCursor.resolve(exercises, steps, cursorId)
+        val exercise = exercises.getOrNull(exerciseIndex)
+        val current = SessionCursor.currentStep(steps, exerciseIndex)
         val unit = settings.unit
-        val doneExercises = exercises.count { e -> e.exercise.skipped || e.sets.all { it.completed } }
         val effectiveEdit = if (current != null && edit?.setId == current.set.id) edit else current?.let {
             SetEdit(it.set.id, it.set.actualReps ?: it.set.targetReps, it.set.actualWeightKg ?: it.set.targetWeightKg, it.set.actualSeconds ?: it.set.targetSeconds)
         }
@@ -129,18 +176,33 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
             SetRow(s, if (s.isWarmup) "$text · warm-up" else text, state, badge)
         } ?: emptyList()
         val lastTime = exercise?.let { lastTimeText(it, unit) } ?: ""
-        val next = current?.let { SessionFlow.next(steps, it) }
-        val nextLabel = when {
-            next == null -> "Finish session"
-            next.exerciseIndex == current.exerciseIndex -> "Set ${next.setIndex + 1} · ${setText(next.set, unit, actual = false)}"
-            else -> "${exercises[next.exerciseIndex].exercise.exerciseName} · Set ${next.setIndex + 1}"
+        val exerciseStates = exercises.mapIndexed { i, e ->
+            val next = SessionCursor.currentStep(steps, i)
+            val targetSet = next?.set ?: e.sortedSets.lastOrNull()
+            ExerciseState(
+                id = e.exercise.id, name = e.exercise.exerciseName,
+                done = e.sets.count { it.completed }, total = e.sets.size, skipped = e.exercise.skipped,
+                isCurrent = i == exerciseIndex, nextSetIndex = next?.setIndex,
+                target = targetSet?.let { setText(it, unit, actual = false) } ?: ""
+            )
         }
+        val upNext = SessionCursor.upNext(exercises, steps, exerciseIndex)
+        val resting = countdown?.kind == TimerKind.REST
+        val peekIndex = if (!resting || peekId == null) null
+        else exercises.indexOfFirst { it.exercise.id == peekId }.takeIf { it >= 0 && it != exerciseIndex }
         return SessionUi(
             session = session, steps = steps, current = current, exercise = exercise,
-            exerciseIndex = current?.exerciseIndex ?: exercises.size, exerciseCount = exercises.size, doneExercises = doneExercises,
+            exerciseIndex = exerciseIndex, exerciseCount = exercises.size,
+            canGoPrevious = exerciseIndex > 0, canGoNext = exerciseIndex >= 0 && exerciseIndex < exercises.size - 1,
+            cursorSkipped = exercise?.exercise?.skipped == true,
+            cursorComplete = exercise != null && !exercise.exercise.skipped && current == null,
+            exerciseStates = exerciseStates,
             lastTime = lastTime, rows = rows, edit = effectiveEdit,
             targetText = current?.let { setText(it.set, unit, actual = false) } ?: "",
-            allDone = current == null, countdown = countdown, now = now, unit = unit, settings = settings, summary = summary, nextLabel = nextLabel
+            allDone = SessionFlow.current(steps) == null, countdown = countdown, now = now, unit = unit, settings = settings, summary = summary,
+            upNext = SessionCursor.upNextText(upNext, exercises) { setText(it, unit, actual = false) },
+            upNextExerciseId = upNext.exerciseIndexOrNull?.let { exercises.getOrNull(it)?.exercise?.id },
+            peekIndex = peekIndex
         )
     }
 
@@ -164,6 +226,62 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
             val w = sets.mapNotNull { it.actualWeightKg }.maxOrNull()
             sets.joinToString(" · ") { "${it.actualReps ?: 0}" } + (if (w != null && w > 0) " at ${Weights.formatWithUnit(w, unit)}" else "")
         }
+    }
+
+    // ---- navigation (FR56, FR57, FR59) -------------------------------------------------------
+
+    private fun moveCursorTo(index: Int) {
+        val exercises = state.value.session?.sortedExercises ?: return
+        exercises.getOrNull(index)?.let { cursor.value = it.exercise.id }
+    }
+
+    fun previousExercise() {
+        val ui = state.value
+        moveCursorTo(SessionCursor.neighbour(ui.exerciseCount, ui.exerciseIndex, -1))
+    }
+
+    fun nextExercise() {
+        val ui = state.value
+        moveCursorTo(SessionCursor.neighbour(ui.exerciseCount, ui.exerciseIndex, +1))
+    }
+
+    fun jumpToExercise(sessionExerciseId: Long) {
+        cursor.value = sessionExerciseId
+    }
+
+    /** Undoes a skip so the exercise's sets are steps again (and visible to history). */
+    fun unskipExercise() {
+        val ex = state.value.exercise ?: return
+        if (!ex.exercise.skipped) return
+        viewModelScope.launch { c.sessions.setExerciseSkipped(ex.exercise, false) }
+    }
+
+    // ---- rest overlay peeking (FR58) ---------------------------------------------------------
+
+    /** Index the rest overlay card shows: the peeked exercise, else the cursor. */
+    private fun viewedIndex(ui: SessionUi): Int = ui.peekIndex ?: ui.exerciseIndex
+
+    fun peekExercise(sessionExerciseId: Long) {
+        peek.value = sessionExerciseId
+    }
+
+    fun peekPrevious() {
+        val ui = state.value
+        val i = SessionCursor.neighbour(ui.exerciseCount, viewedIndex(ui), -1)
+        ui.session?.sortedExercises?.getOrNull(i)?.let { peek.value = it.exercise.id }
+    }
+
+    fun peekNext() {
+        val ui = state.value
+        val i = SessionCursor.neighbour(ui.exerciseCount, viewedIndex(ui), +1)
+        ui.session?.sortedExercises?.getOrNull(i)?.let { peek.value = it.exercise.id }
+    }
+
+    /** Moves the cursor to the peeked exercise; the rest keeps running. */
+    fun continueWithPeeked() {
+        val id = peek.value ?: return
+        cursor.value = id
+        peek.value = null
     }
 
     // ---- set editing -------------------------------------------------------------------------
@@ -195,7 +313,7 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
         }
     }
 
-    /** Logs the current set with the edited values and starts the rest timer when due. */
+    /** Logs the current set with the edited values, moves the cursor along the flow and starts the rest timer when due. */
     fun doneSet() {
         val ui = state.value
         val step = ui.current ?: return
@@ -203,9 +321,16 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
         viewModelScope.launch {
             c.sessions.completeSet(step.set, e.reps, e.weightKg, e.seconds)
             edit.value = null
-            checkRecords(ui, step, e.reps, e.weightKg, e.seconds)
-            startRestIfDue(ui, step)
+            afterSetLogged(ui, step, e.reps, e.weightKg, e.seconds)
         }
+    }
+
+    /** Shared tail of every way a set gets logged: records, cursor move (superset alternation), rest. */
+    private suspend fun afterSetLogged(ui: SessionUi, step: Step, reps: Int?, weightKg: Double?, seconds: Int?) {
+        // Move first, so the re-emitted rows never show the finished exercise's "complete" card for a frame.
+        moveCursorTo(SessionCursor.afterDoneSet(ui.steps, step))
+        checkRecords(ui, step, reps, weightKg, seconds)
+        startRestIfDue(ui, step)
     }
 
     private suspend fun checkRecords(ui: SessionUi, step: Step, reps: Int?, weightKg: Double?, seconds: Int?) {
@@ -222,24 +347,40 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
         val next = SessionFlow.next(ui.steps, step) ?: return
         val ex = ui.session?.sortedExercises?.getOrNull(step.exerciseIndex) ?: return
         val rest = if (next.exerciseIndex != step.exerciseIndex) ui.settings.defaultExerciseRestSeconds.coerceAtLeast(ex.exercise.restSeconds) else ex.exercise.restSeconds
+        // The label only feeds the notification; the overlay computes its own text live from state.
         val label = if (next.exerciseIndex == step.exerciseIndex) "Set ${next.setIndex + 1} · ${setText(next.set, ui.unit, actual = false)}"
         else "${ui.session.sortedExercises[next.exerciseIndex].exercise.exerciseName} · Set ${next.setIndex + 1}"
+        peek.value = null
         c.timer.start(TimerKind.REST, rest, label, tag = next.set.id)
     }
 
     fun addRest30() = c.timer.add(30)
-    fun skipRest() = c.timer.skip()
 
-    fun addSet() {
-        val ex = state.value.exercise ?: return
-        viewModelScope.launch { c.sessions.addSet(ex.exercise.id, ex.sortedSets.lastOrNull(), ex.exercise.exerciseType) }
+    fun skipRest() {
+        peek.value = null
+        c.timer.skip()
     }
 
-    fun skipExercise() {
+    /** Appends a set to the exercise on screen; on a skipped exercise this also undoes the skip. */
+    fun addSet() {
         val ex = state.value.exercise ?: return
         viewModelScope.launch {
-            c.timer.skip()
+            if (ex.exercise.skipped) c.sessions.setExerciseSkipped(ex.exercise, false)
+            c.sessions.addSet(ex.exercise.id, ex.sortedSets.lastOrNull(), ex.exercise.exerciseType)
+        }
+    }
+
+    /** Marks the exercise on screen skipped and moves to its neighbour. A running rest timer is left alone. */
+    fun skipExercise() {
+        val ui = state.value
+        val ex = ui.exercise ?: return
+        // Only a timed set of this very exercise is cancelled; a rest is a break, not a statement about this exercise.
+        if (timedSetId != null && ex.sets.any { it.id == timedSetId }) cancelTimedSet()
+        val count = ui.exerciseCount
+        val target = if (ui.exerciseIndex < count - 1) ui.exerciseIndex + 1 else ui.exerciseIndex - 1
+        viewModelScope.launch {
             c.sessions.setExerciseSkipped(ex.exercise, true)
+            if (target in 0 until count) moveCursorTo(target)
         }
     }
 
@@ -257,33 +398,43 @@ class SessionViewModel(private val c: AppContainer, private val sessionId: Long)
         c.timer.skip()
     }
 
+    /** The step a countdown belongs to, resolved from its tag (the session set id), never from the on-screen set. */
+    private fun taggedStep(ui: SessionUi, cd: Countdown): Step? {
+        val exercises = ui.session?.sortedExercises ?: return null
+        return SessionCursor.stepForSet(exercises, ui.steps, cd.tag)
+    }
+
     fun stopTimedSetEarly() {
         val ui = state.value
-        val step = ui.current ?: return
         val cd = ui.countdown ?: return
         if (cd.kind != TimerKind.WORK) return
+        val step = taggedStep(ui, cd) ?: return
+        if (step.set.completed) return
         val held = cd.elapsedSeconds(System.currentTimeMillis())
         timedSetId = null
         c.timer.skip()
         viewModelScope.launch {
             c.sessions.completeSet(step.set, null, null, held)
-            checkRecords(ui, step, null, null, held)
-            startRestIfDue(ui, step)
+            afterSetLogged(ui, step, null, null, held)
         }
     }
 
     private fun onTimerFinished(cd: Countdown) {
         val ui = state.value
-        val step = ui.current ?: return
-        if (cd.tag != step.set.id || timedSetId != step.set.id) return
+        if (cd.kind == TimerKind.REST) {
+            // The overlay closes on its own (no countdown); forget any peek so the next rest starts on the cursor.
+            peek.value = null
+            return
+        }
+        val step = taggedStep(ui, cd) ?: return
+        if (timedSetId != step.set.id || step.set.completed) return
         when (cd.kind) {
             TimerKind.GET_READY -> c.timer.start(TimerKind.WORK, step.set.targetSeconds ?: 30, "Hold", tag = step.set.id)
             TimerKind.WORK -> {
                 timedSetId = null
                 viewModelScope.launch {
                     c.sessions.completeSet(step.set, null, null, step.set.targetSeconds)
-                    checkRecords(ui, step, null, null, step.set.targetSeconds)
-                    startRestIfDue(ui, step)
+                    afterSetLogged(ui, step, null, null, step.set.targetSeconds)
                 }
             }
             TimerKind.REST -> Unit
