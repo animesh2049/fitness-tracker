@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Session with exercise navigator", "x": 0, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "Rest.dc.html", "title": "Rest with navigation", "x": 480, "y": 0, "w": 390, "h": 844, "is_interactive": true },
+    { "file": "Insert.dc.html", "title": "Insert exercise for today", "x": 960, "y": 0, "w": 390, "h": 844, "is_interactive": true }
+  ],
+  "annotations": [
+    { "id": "nav", "x": 0, "y": -250, "w": 440, "text": "1. Exercise navigator: the arrows and the progress segments move between exercises at any time, in any state. The sample opens on exercise 2 with exercise 1 done and exercise 3 skipped by accident: step to it and tap Resume to undo the skip; the set list comes back. Skip only marks the exercise and moves on; nothing is lost. Today's list at the bottom shows every exercise with its state and is tappable too. The + button opens Insert exercise." },
+    { "id": "rest", "x": 480, "y": -190, "w": 420, "text": "2. Rest timer with navigation: the timer, +30 s and Skip rest stay on top; below them the Up next card shows the current exercise and its set pips, and the arrows peek at earlier and later exercises while the timer keeps running. Peeking at another exercise offers Continue with it after this rest. Today's list is visible under the card." },
+    { "id": "insert", "x": 960, "y": -210, "w": 420, "text": "3. Insert exercise for today: pick any exercise from the library (search, muscle chips), see when it was last logged and the sets it will start with (last logged sets, else the rep range). Choose where it goes: after the current exercise, at the end, or next up. It is added to this session only and tagged Added today everywhere it appears (session, rest card, history, summary). The routine and the group are untouched." }
+  ],
+  "launch": { "view": "canvas" }
+}

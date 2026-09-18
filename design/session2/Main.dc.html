@@ -1,0 +1,258 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 24px 20px 10px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Push day · {{exPos}}</div>
+      <button style="height: 36px; padding: 0 12px; border-radius: 8px; background: transparent; color: #8b9096; border: 1px solid #2c3036; font-size: 13px; font-weight: 500;">End</button>
+    </div>
+    <div style="display: flex; gap: 4px;">
+      <sc-for list="{{segments}}" as="seg" hint-placeholder-count="5">
+        <div onClick="{{seg.pick}}" style="{{seg.style}}"></div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding: 0 12px 10px; display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+    <button onClick="{{prev}}" aria-label="Previous exercise" style="{{prevStyle}}">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </button>
+    <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; align-items: center; text-align: center;">
+      <div style="display: flex; align-items: center; gap: 8px; max-width: 100%;">
+        <div style="font-size: 22px; font-weight: 600; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{exName}}</div>
+        <sc-if value="{{exAdded}}" hint-placeholder-val="{{ false }}">
+          <div style="height: 20px; padding: 0 8px; border-radius: 10px; border: 1px solid #33421a; color: #c8f03c; font-size: 11px; font-weight: 600; display: flex; align-items: center; white-space: nowrap;">Added today</div>
+        </sc-if>
+      </div>
+      <div style="font-size: 13px; color: {{exStateColor}};">{{exState}}</div>
+    </div>
+    <button onClick="{{next}}" aria-label="Next exercise" style="{{nextStyle}}">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+    </button>
+  </div>
+
+  <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="font-size: 13px; color: #8b9096; padding: 0 4px;">Last time <span class="mono" style="color: #b4b8bd;">{{lastText}}</span></div>
+
+    <sc-if value="{{exSkipped}}" hint-placeholder-val="{{ false }}">
+      <div style="background: #17191c; border: 1px solid #24272c; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+          <div style="font-size: 15px; font-weight: 600;">Skipped earlier</div>
+          <div style="font-size: 13px; color: #8b9096;">Nothing logged. Resume to log sets now; the skip is undone.</div>
+        </div>
+        <button onClick="{{resume}}" style="height: 40px; padding: 0 16px; border-radius: 20px; background: #c8f03c; color: #101400; border: 0; font-size: 13px; font-weight: 600; flex-shrink: 0;">Resume</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{exActive}}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <sc-for list="{{sets}}" as="s" hint-placeholder-count="3">
+          <div style="{{s.rowStyle}}">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="{{s.numStyle}}">{{s.num}}</div>
+              <div class="mono" style="font-size: 15px;">{{s.text}}</div>
+            </div>
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: {{s.badgeColor}};">{{s.badge}}</div>
+          </div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{hasCurrent}}" hint-placeholder-val="{{ true }}">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="font-size: 15px; font-weight: 600;">Set {{curNum}} of {{setCount}}</div>
+            <div class="mono" style="font-size: 13px; color: #8b9096;">target {{curTarget}}</div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+            <div style="background: #0e0f11; border: 1px solid #24272c; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b9096;">Weight kg</div>
+              <div class="mono" style="font-size: 34px; font-weight: 600; line-height: 1;">{{curWeight}}</div>
+              <div style="display: flex; gap: 8px;">
+                <button onClick="{{decW}}" style="width: 52px; height: 44px; border-radius: 10px; background: #1f2226; color: #ecedee; border: 0; font-size: 22px; font-weight: 500;">−</button>
+                <button onClick="{{incW}}" style="width: 52px; height: 44px; border-radius: 10px; background: #1f2226; color: #ecedee; border: 0; font-size: 22px; font-weight: 500;">+</button>
+              </div>
+            </div>
+            <div style="background: #0e0f11; border: 1px solid #24272c; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;">
+              <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b9096;">Reps</div>
+              <div class="mono" style="font-size: 34px; font-weight: 600; line-height: 1;">{{curReps}}</div>
+              <div style="display: flex; gap: 8px;">
+                <button onClick="{{decR}}" style="width: 52px; height: 44px; border-radius: 10px; background: #1f2226; color: #ecedee; border: 0; font-size: 22px; font-weight: 500;">−</button>
+                <button onClick="{{incR}}" style="width: 52px; height: 44px; border-radius: 10px; background: #1f2226; color: #ecedee; border: 0; font-size: 22px; font-weight: 500;">+</button>
+              </div>
+            </div>
+          </div>
+          <button onClick="{{doneSet}}" style="height: 56px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 17px; font-weight: 600;">Done set</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{exDone}}" hint-placeholder-val="{{ false }}">
+        <div style="background: #17191c; border: 1px solid #24272c; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="font-size: 15px; font-weight: 600;">{{exName}} complete</div>
+          <div style="font-size: 13px; color: #8b9096; line-height: 1.4;">{{exResult}}</div>
+          <sc-if value="{{hasNext}}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{next}}" style="height: 52px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 16px; font-weight: 600;">Next: {{nextName}}</button>
+          </sc-if>
+          <sc-if value="{{isLast}}" hint-placeholder-val="{{ false }}">
+            <button style="height: 52px; border-radius: 12px; background: #c8f03c; color: #101400; border: 0; font-size: 16px; font-weight: 600;">Finish session</button>
+          </sc-if>
+        </div>
+      </sc-if>
+    </sc-if>
+
+    <div style="display: flex; gap: 8px;">
+      <button onClick="{{addSet}}" style="flex: 1 1 0; height: 44px; border-radius: 10px; background: transparent; color: #b4b8bd; border: 1px solid #2c3036; font-size: 14px; font-weight: 500;">Add set</button>
+      <button onClick="{{skipEx}}" style="flex: 1 1 0; height: 44px; border-radius: 10px; background: transparent; color: #b4b8bd; border: 1px solid #2c3036; font-size: 14px; font-weight: 500;">Skip</button>
+      <button aria-label="Insert exercise" style="width: 44px; height: 44px; border-radius: 10px; background: transparent; color: #c8f03c; border: 1px solid #33421a; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 4px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 0 4px;">Today's list</div>
+      <sc-for list="{{list}}" as="l" hint-placeholder-count="5">
+        <div onClick="{{l.pick}}" style="{{l.style}}">
+          <div style="{{l.dot}}"></div>
+          <div style="flex-grow: 1; min-width: 0; display: flex; align-items: center; gap: 8px;">
+            <div style="font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{l.name}}</div>
+            <sc-if value="{{l.added}}" hint-placeholder-val="{{ false }}">
+              <div style="height: 18px; padding: 0 7px; border-radius: 9px; border: 1px solid #33421a; color: #c8f03c; font-size: 10px; font-weight: 600; display: flex; align-items: center; flex-shrink: 0;">Added today</div>
+            </sc-if>
+          </div>
+          <div class="mono" style="font-size: 12px; color: {{l.metaColor}}; white-space: nowrap;">{{l.meta}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const EXERCISES = [
+  { name: 'Bench press', reps: 8, weight: 62.5, step: 2.5, last: '8 · 8 · 7 at 60 kg', added: false },
+  { name: 'Overhead press', reps: 10, weight: 27.5, step: 2.5, last: '10 · 8 · 7 at 30 kg', added: false },
+  { name: 'Incline dumbbell press', reps: 11, weight: 22.5, step: 2.5, last: '10 · 10 · 10 at 22.5 kg', added: false },
+  { name: 'Face pull', reps: 15, weight: 15, step: 2.5, last: '15 · 15 · 12 at 15 kg · 4 Sep', added: true },
+  { name: 'Triceps pushdown', reps: 12, weight: 25, step: 2.5, last: '12 · 12 · 10 at 25 kg', added: false }
+];
+function freshSets(ex) { return [0, 1, 2].map(() => ({ reps: ex.reps, weight: ex.weight, done: false })); }
+
+class Component extends DCLogic {
+  state = {
+    idx: 1,
+    // Sample: exercise 1 already done, exercise 3 skipped by accident, exercise 2 in progress.
+    ex: EXERCISES.map((e, i) => ({
+      sets: freshSets(e).map((s) => Object.assign({}, s, { done: i === 0 })),
+      cur: i === 0 ? 3 : 0,
+      skipped: i === 2
+    }))
+  };
+  patch(i, changes) {
+    const ex = this.state.ex.slice();
+    ex[i] = Object.assign({}, ex[i], changes);
+    this.setState({ ex });
+  }
+  adjust(field, delta) {
+    const e = this.state.ex[this.state.idx];
+    const sets = e.sets.slice();
+    const s = Object.assign({}, sets[e.cur]);
+    s[field] = Math.max(0, Math.round((s[field] + delta) * 100) / 100);
+    sets[e.cur] = s;
+    this.patch(this.state.idx, { sets });
+  }
+  renderVals() {
+    const st = this.state;
+    const i = st.idx;
+    const def = EXERCISES[i];
+    const e = st.ex[i];
+    const cur = e;
+    const hasCurrent = !cur.skipped && cur.cur < cur.sets.length;
+    const exDone = !cur.skipped && !hasCurrent;
+    const done = cur.sets.filter((s) => s.done).length;
+    const isLast = i === EXERCISES.length - 1;
+    const arrow = (enabled) => 'width: 44px; height: 44px; border-radius: 10px; background: #17191c; border: 1px solid #24272c; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: ' + (enabled ? '#ecedee' : '#3a3e44') + ';';
+    const sets = cur.sets.map((s, k) => {
+      const isCur = k === cur.cur;
+      const base = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 10px; min-height: 48px; box-sizing: border-box; ';
+      const numBase = 'width: 28px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; ';
+      let rowStyle, numStyle, badge, badgeColor;
+      if (s.done) {
+        rowStyle = base + 'background: #0e0f11; border: 1px solid #1f2226; color: #b4b8bd;';
+        numStyle = numBase + 'background: #c8f03c; color: #101400;';
+        badge = s.reps >= def.reps ? 'Hit' : 'Missed'; badgeColor = s.reps >= def.reps ? '#c8f03c' : '#ff6b5c';
+      } else if (isCur) {
+        rowStyle = base + 'background: #17191c; border: 1px solid #c8f03c;';
+        numStyle = numBase + 'background: #1f2226; color: #ecedee;';
+        badge = 'Now'; badgeColor = '#c8f03c';
+      } else {
+        rowStyle = base + 'background: transparent; border: 1px solid #1f2226; color: #6b7076;';
+        numStyle = numBase + 'background: #17191c; color: #6b7076;';
+        badge = ''; badgeColor = '#6b7076';
+      }
+      return { num: k + 1, text: s.reps + ' × ' + s.weight + ' kg', rowStyle, numStyle, badge, badgeColor };
+    });
+    const stateOf = (k) => {
+      const x = st.ex[k];
+      const d = x.sets.filter((s) => s.done).length;
+      if (x.skipped) return { text: 'Skipped', color: '#ff6b5c', dot: '#ff6b5c' };
+      if (d === x.sets.length) return { text: d + ' of ' + x.sets.length + ' sets done', color: '#c8f03c', dot: '#c8f03c' };
+      if (d > 0) return { text: d + ' of ' + x.sets.length + ' sets done', color: '#b4b8bd', dot: '#6f8a1c' };
+      return { text: x.sets.length + ' sets · not started', color: '#8b9096', dot: '#2c3036' };
+    };
+    const segments = EXERCISES.map((_, k) => {
+      const x = st.ex[k];
+      const d = x.sets.filter((s) => s.done).length;
+      const color = x.skipped ? '#4a2a28' : (d === x.sets.length ? '#c8f03c' : (k === i ? '#6f8a1c' : (d > 0 ? '#3f4f14' : '#1f2226')));
+      return { style: 'flex: 1 1 0; height: 4px; border-radius: 2px; cursor: pointer; background: ' + color + (k === i ? '; outline: 1px solid #c8f03c; outline-offset: 2px;' : ';'), pick: () => this.setState({ idx: k }) };
+    });
+    const list = EXERCISES.map((d, k) => {
+      const s = stateOf(k);
+      return {
+        name: d.name, added: d.added, meta: s.text, metaColor: s.color,
+        dot: 'width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; background: ' + s.dot + ';',
+        style: 'display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border-radius: 10px; cursor: pointer; box-sizing: border-box; background: ' + (k === i ? '#17191c' : 'transparent') + '; border: 1px solid ' + (k === i ? '#2c3036' : '#1f2226') + ';',
+        pick: () => this.setState({ idx: k })
+      };
+    });
+    const state = stateOf(i);
+    return {
+      exPos: 'Exercise ' + (i + 1) + ' of ' + EXERCISES.length,
+      segments, list,
+      exName: def.name, exAdded: def.added, exState: state.text, exStateColor: state.color,
+      lastText: def.last,
+      prev: () => this.setState({ idx: Math.max(0, i - 1) }),
+      next: () => this.setState({ idx: Math.min(EXERCISES.length - 1, i + 1) }),
+      prevStyle: arrow(i > 0), nextStyle: arrow(!isLast),
+      exSkipped: cur.skipped, exActive: !cur.skipped, exDone, hasCurrent,
+      resume: () => this.patch(i, { skipped: false }),
+      sets,
+      curNum: cur.cur + 1, setCount: cur.sets.length, curTarget: def.reps + ' × ' + def.weight + ' kg',
+      curWeight: hasCurrent ? cur.sets[cur.cur].weight : 0, curReps: hasCurrent ? cur.sets[cur.cur].reps : 0,
+      incW: () => this.adjust('weight', def.step), decW: () => this.adjust('weight', -def.step),
+      incR: () => this.adjust('reps', 1), decR: () => this.adjust('reps', -1),
+      doneSet: () => { const s = cur.sets.slice(); s[cur.cur] = Object.assign({}, s[cur.cur], { done: true }); this.patch(i, { sets: s, cur: cur.cur + 1 }); },
+      addSet: () => this.patch(i, { sets: cur.sets.concat([{ reps: def.reps, weight: def.weight, done: false }]) }),
+      skipEx: () => { this.patch(i, { skipped: true }); if (!isLast) this.setState({ idx: i + 1 }); },
+      exResult: done + ' of ' + cur.sets.length + ' sets logged. Use the arrows or the list to revisit any exercise.',
+      hasNext: !isLast, isLast, nextName: isLast ? '' : EXERCISES[i + 1].name
+    };
+  }
+}
+</script>
+</body>
+</html>

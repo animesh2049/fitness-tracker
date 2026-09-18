@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+  <style>
+    body { margin: 0; background: #0e0f11; color: #ecedee; font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #c8f03c; } a:hover { color: #dcff5a; }
+    button { font-family: inherit; cursor: pointer; }
+    .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .scroll { scrollbar-width: none; } .scroll::-webkit-scrollbar { display: none; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #0e0f11; color: #ecedee; display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box;">
+
+  <div style="padding: 24px 12px 8px 12px; display: flex; align-items: flex-start; gap: 8px; flex-shrink: 0;">
+    <button aria-label="Back" style="width: 44px; height: 44px; border-radius: 10px; background: transparent; border: 0; color: #ecedee; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+    </button>
+    <div style="display: flex; flex-direction: column; gap: 4px; padding-top: 6px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase;">Push day · Insert exercise</div>
+      <div style="font-size: 26px; font-weight: 600; line-height: 1.1;">Add one for today</div>
+      <div style="font-size: 14px; color: #8b9096;">Logged in this session only. Your routine and group stay as they are.</div>
+    </div>
+  </div>
+
+  <div style="padding: 6px 16px 10px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;">
+    <div style="height: 44px; border-radius: 10px; background: #17191c; border: 1px solid #24272c; display: flex; align-items: center; gap: 10px; padding: 0 12px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b9096" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+      <div style="font-size: 14px; color: #6b7076;">Search exercises</div>
+    </div>
+    <div class="scroll" style="display: flex; gap: 8px; overflow-x: auto;">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+        <button onClick="{{c.pick}}" style="{{c.style}}">{{c.name}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div class="scroll" style="flex-grow: 1; overflow-y: auto; padding: 0 16px 16px; display: flex; flex-direction: column; gap: 6px;">
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+      <div onClick="{{r.pick}}" style="{{r.style}}">
+        <div style="{{r.radio}}"></div>
+        <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="font-size: 15px; font-weight: 500;">{{r.name}}</div>
+            <sc-if value="{{r.inToday}}" hint-placeholder-val="{{ false }}">
+              <div style="height: 18px; padding: 0 7px; border-radius: 9px; border: 1px solid #2c3036; color: #8b9096; font-size: 10px; font-weight: 600; display: flex; align-items: center;">In today's list</div>
+            </sc-if>
+          </div>
+          <div class="mono" style="font-size: 12px; color: #8b9096;">{{r.last}}</div>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6b7076; border: 1px solid #2c3036; border-radius: 6px; padding: 3px 6px;">{{r.kind}}</div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="padding: 12px 16px 16px; border-top: 1px solid #1f2226; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; background: #0e0f11;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #8b9096; text-transform: uppercase; padding: 0 4px;">Where</div>
+      <div style="display: flex; background: #17191c; border: 1px solid #24272c; border-radius: 10px; padding: 3px; gap: 3px;">
+        <sc-for list="{{where}}" as="w" hint-placeholder-count="3">
+          <button onClick="{{w.pick}}" style="{{w.style}}">{{w.name}}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px;">
+      <div style="font-size: 13px; color: #8b9096;">Starts with</div>
+      <div class="mono" style="font-size: 13px; color: #b4b8bd;">{{startsWith}}</div>
+    </div>
+    <button style="{{ctaStyle}}">{{ctaText}}</button>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const LIB = [
+  { name: 'Face pull', kind: 'weight', muscle: 'Shoulders', last: '3 × 15 at 15 kg · 4 Sep', defaults: '3 sets · 15 × 15 kg' },
+  { name: 'Lateral raise', kind: 'weight', muscle: 'Shoulders', last: '3 × 12 at 10 kg · 30 Aug', defaults: '3 sets · 12 × 10 kg' },
+  { name: 'Cable fly', kind: 'weight', muscle: 'Chest', last: 'never logged', defaults: '3 sets · 8 to 12 reps · pick a weight' },
+  { name: 'Dips', kind: 'bodyweight', muscle: 'Chest', last: '3 × 8 · 2 Sep', defaults: '3 sets · 8 reps' },
+  { name: 'Push-up', kind: 'bodyweight', muscle: 'Chest', last: '3 × 15 · 28 Aug', defaults: '3 sets · 15 reps' },
+  { name: 'Overhead press', kind: 'weight', muscle: 'Shoulders', last: '3 × 10 at 27.5 kg · today', defaults: '3 sets · 10 × 27.5 kg', inToday: true },
+  { name: 'Plank', kind: 'timed', muscle: 'Core', last: '3 × 45 s · 10 Sep', defaults: '3 sets · 45 s' },
+  { name: 'Hanging leg raise', kind: 'bodyweight', muscle: 'Core', last: '3 × 10 · 5 Sep', defaults: '3 sets · 10 reps' }
+];
+const CHIPS = ['All', 'Chest', 'Shoulders', 'Triceps', 'Core', 'Back'];
+const WHERE = ['After Overhead press', 'At the end', 'Next up'];
+class Component extends DCLogic {
+  state = { chip: 'All', sel: 0, where: 0 };
+  renderVals() {
+    const st = this.state;
+    const rows = LIB.filter((x) => st.chip === 'All' || x.muscle === st.chip).map((x) => {
+      const idx = LIB.indexOf(x);
+      const on = idx === st.sel;
+      return {
+        name: x.name, last: x.last, kind: x.kind, inToday: !!x.inToday,
+        radio: 'width: 20px; height: 20px; border-radius: 10px; flex-shrink: 0; box-sizing: border-box; border: ' + (on ? '6px solid #c8f03c' : '2px solid #2c3036') + '; background: ' + (on ? '#101400' : 'transparent') + ';',
+        style: 'display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 14px; border-radius: 12px; cursor: pointer; box-sizing: border-box; background: ' + (on ? '#17191c' : 'transparent') + '; border: 1px solid ' + (on ? '#c8f03c' : '#1f2226') + ';',
+        pick: () => this.setState({ sel: idx })
+      };
+    });
+    const sel = LIB[st.sel];
+    return {
+      chips: CHIPS.map((c) => ({ name: c, style: 'height: 36px; padding: 0 14px; border-radius: 18px; font-size: 13px; font-weight: 600; white-space: nowrap; flex-shrink: 0; ' + (c === st.chip ? 'background: #ecedee; color: #101400; border: 0;' : 'background: transparent; color: #b4b8bd; border: 1px solid #2c3036;'), pick: () => this.setState({ chip: c }) })),
+      rows,
+      where: WHERE.map((w, k) => ({ name: w, style: 'flex: 1 1 0; height: 38px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 0; padding: 0 4px; ' + (k === st.where ? 'background: #2c3036; color: #ecedee;' : 'background: transparent; color: #8b9096;'), pick: () => this.setState({ where: k }) })),
+      startsWith: sel ? sel.defaults : '',
+      ctaStyle: 'height: 56px; border-radius: 12px; border: 0; font-size: 17px; font-weight: 600; background: ' + (sel ? '#c8f03c' : '#1f2226') + '; color: ' + (sel ? '#101400' : '#6b7076') + ';',
+      ctaText: sel ? 'Add ' + sel.name + ' for today' : 'Pick an exercise'
+    };
+  }
+}
+</script>
+</body>
+</html>
