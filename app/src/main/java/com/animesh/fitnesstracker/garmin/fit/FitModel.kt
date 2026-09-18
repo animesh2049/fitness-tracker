@@ -42,6 +42,9 @@ data class DecodedFit(
     val sports: List<SportRec> = emptyList(),
     val activity: List<ActivityRec> = emptyList(),
     val workouts: List<WorkoutRec> = emptyList(),
+    val workoutSteps: List<WorkoutStepRec> = emptyList(),
+    val exerciseTitles: List<ExerciseTitleRec> = emptyList(),
+    val sets: List<SetRec> = emptyList(),
     val capabilities: List<CapabilitiesRec> = emptyList(),
     /** Every record in the file, including unknown messages, for diagnostics. */
     val raw: List<RawRecord> = emptyList(),
@@ -274,8 +277,76 @@ data class SportRec(val sport: Int?, val subSport: Int?, val name: String?)
 /** Global message 34. */
 data class ActivityRec(val timestamp: Long?, val localTimestamp: Long?, val numSessions: Int?, val totalTimerTime: Double?, val name: String? = null)
 
-/** Global message 26. */
-data class WorkoutRec(val name: String?, val sport: Int?)
+/**
+ * Global message 26. In a workout file this is the header the watch lists under Training,
+ * Workouts; in an activity file recorded from a guided workout the watch copies it back.
+ * [numValidSteps] must equal the number of [WorkoutStepRec]s that follow it.
+ */
+data class WorkoutRec(
+    val name: String?,
+    val sport: Int?,
+    val subSport: Int? = null,
+    val numValidSteps: Int? = null,
+    val capabilities: Long? = null,
+    val messageIndex: Int? = null
+)
+
+/**
+ * Global message 27, one step of a workout in execution order. Duration types: 0 time
+ * ([durationValue] in ms), 5 open, 6 repeat ([durationValue] is the message index the loop
+ * returns to, [targetValue] the iteration count), 29 reps. Intensity: 0 active, 1 rest, 2 warm-up.
+ * [exerciseWeightKg] has the profile scale 100 already applied.
+ */
+data class WorkoutStepRec(
+    val messageIndex: Int?,
+    val name: String?,
+    val durationType: Int?,
+    val durationValue: Long?,
+    val targetType: Int?,
+    val targetValue: Long?,
+    val customTargetValueLow: Long? = null,
+    val customTargetValueHigh: Long? = null,
+    val intensity: Int?,
+    val notes: String? = null,
+    val equipment: Int? = null,
+    val exerciseCategory: Int?,
+    val exerciseName: Int?,
+    val exerciseWeightKg: Double?,
+    val weightDisplayUnit: Int?
+)
+
+/**
+ * Global message 264. The display text for one (exercise_category, exercise_name) pair used by the
+ * steps. [names] holds every string of the field (the profile allows an array); [name] is the first.
+ */
+data class ExerciseTitleRec(
+    val messageIndex: Int?,
+    val exerciseCategory: Int?,
+    val exerciseName: Int?,
+    val names: List<String>
+) {
+    val name: String? get() = names.firstOrNull()
+}
+
+/**
+ * Global message 225, one set the watch recorded in a strength activity. [setType] 0 rest, 1 active.
+ * [weightKg] has the profile scale 16 applied. [category] and [categorySubtype] mirror the
+ * workout_step's exercise_category and exercise_name (arrays; the first element is the one used).
+ * [wktStepIndex] is the message index of the workout step this set fulfilled, null for free sets.
+ */
+data class SetRec(
+    val timestamp: Long?,
+    val durationSeconds: Double?,
+    val repetitions: Int?,
+    val weightKg: Double?,
+    val setType: Int?,
+    val startTime: Long?,
+    val category: List<Int> = emptyList(),
+    val categorySubtype: List<Int> = emptyList(),
+    val weightDisplayUnit: Int? = null,
+    val messageIndex: Int? = null,
+    val wktStepIndex: Int? = null
+)
 
 /** Global message 1 (sent over the GFDI link during the handshake, also present in device.fit). */
 data class CapabilitiesRec(val connectivitySupported: Long?, val sportsSupported: Long? = null)

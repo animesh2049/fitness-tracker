@@ -64,22 +64,12 @@ data class EncodedWorkout(
 
 /**
  * Encodes a [WatchWorkoutPlan] as a Garmin workout FIT file (messages file_id, workout,
- * workout_step, exercise_title). Implemented in Milestone 29; this entry point is the contract.
+ * workout_step, exercise_title). The encoding lives in [WorkoutFitWriter], the catalogue lookup in
+ * [GarminExerciseCatalog]; this entry point is the contract the UI layer uses.
  */
 object WorkoutEncoder {
     fun encode(plan: WatchWorkoutPlan): EncodedWorkout = WorkoutFitWriter.encode(plan)
 
     /** The catalogue mapping alone, for the preview sheet before encoding. */
     fun mappings(plan: WatchWorkoutPlan): List<ExerciseMapping> = plan.exercises.map { GarminExerciseCatalog.map(it.appExerciseId, it.name) }
-}
-
-/** Placeholder until Milestone 29 lands. */
-internal object WorkoutFitWriter {
-    fun encode(plan: WatchWorkoutPlan): EncodedWorkout = throw UnsupportedOperationException("Workout encoder not implemented yet (Milestone 29)")
-}
-
-/** Placeholder until Milestone 29 lands. */
-internal object GarminExerciseCatalog {
-    fun map(appExerciseId: Long, name: String): ExerciseMapping =
-        ExerciseMapping(appExerciseId, name, ExerciseMapping.CUSTOM_CATEGORY, appExerciseId.toInt(), null)
 }
