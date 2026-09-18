@@ -78,6 +78,7 @@ data class WatchScreenState(
             is SyncState.Listing -> 0.15f
             is SyncState.Downloading -> if (s.total <= 0) 0.2f else 0.2f + 0.7f * (s.done.toFloat() / s.total)
             is SyncState.Importing -> 0.95f
+            is SyncState.Uploading -> if (s.totalBytes <= 0) 0.2f else 0.2f + 0.75f * (s.sentBytes.toFloat() / s.totalBytes)
             else -> 0f
         }
 
@@ -88,6 +89,7 @@ data class WatchScreenState(
             is SyncState.Listing -> "reading directory"
             is SyncState.Downloading -> if (s.total > 0) "file ${(s.done + 1).coerceAtMost(s.total)} of ${s.total}" else "downloading"
             is SyncState.Importing -> "importing"
+            is SyncState.Uploading -> "${kb(s.sentBytes)} of ${kb(s.totalBytes)} KB"
             else -> ""
         }
 
@@ -98,18 +100,33 @@ data class WatchScreenState(
             is SyncState.Connecting -> "Waking the watch"
             is SyncState.Handshake -> "Talking to the watch"
             is SyncState.Listing -> "Asking what is new"
+            is SyncState.Uploading -> "Sending ${s.label}"
             else -> ""
         }
 
     /** Line under the Sync now button after the last run, null while idle with nothing to report. */
     val syncOutcome: String?
         get() = when (val s = syncState) {
-            is SyncState.Done -> if (s.newFiles == 0) "Nothing new on the watch" else "Synced ${s.newFiles} new ${if (s.newFiles == 1) "file" else "files"}"
+            is SyncState.Done -> when {
+                s.uploadedWorkout != null -> "Sent ${s.uploadedWorkout} to the watch"
+                s.newFiles == 0 -> "Nothing new on the watch"
+                else -> "Synced ${s.newFiles} new ${if (s.newFiles == 1) "file" else "files"}"
+            }
             is SyncState.Failed -> s.reason
             else -> null
         }
 
     val syncFailed: Boolean get() = syncState is SyncState.Failed
+
+    /** "Push day · Thu 17 Sep · 2 h ago" for the status card, null when nothing was ever sent. */
+    val lastSentLabel: String?
+        get() {
+            val name = watch?.lastPushedWorkoutName ?: return null
+            val at = watch.lastPushedAtMillis ?: return name
+            return "$name · ${relative(at)}"
+        }
+
+    private fun kb(bytes: Int): String = String.format(Locale.US, "%.1f", bytes / 1024.0)
 }
 
 /** State and actions for the Watch screen: scanning, pairing, syncing, the FIT archive and the sync log. */

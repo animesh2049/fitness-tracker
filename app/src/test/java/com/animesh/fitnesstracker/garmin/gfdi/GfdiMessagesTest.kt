@@ -239,4 +239,86 @@ class GfdiMessagesTest {
         assertEquals(b.garminTime, r.u32())
         assertEquals(7200, r.i32())
     }
+
+    @Test
+    fun `create file frame`() {
+        // 5005: size 1000, 128/5, index 0, reserved 0, subTypeMask 0, numberMask 0xFFFF, pathLength 0, id 0x1122334455667788
+        assertFrame(
+            "1C 00 8D 13 E8 03 00 00 80 05 00 00 00 00 FF FF 00 00 88 77 66 55 44 33 22 11",
+            GfdiOut.createFile(1000, fileId = 0x1122334455667788L)
+        )
+        // Default type is a workout FIT file and the id is random but the layout is fixed.
+        val random = GfdiOut.createFile(64)
+        assertEquals(28, random.size)
+        assertEquals(0x80, random[8].toInt() and 0xFF)
+        assertEquals(5, random[9].toInt())
+    }
+
+    @Test
+    fun `upload request frame`() {
+        // 5003: index 77, size 1000, offset 0, crcSeed 0
+        assertFrame("12 00 8B 13 4D 00 E8 03 00 00 00 00 00 00 00 00", GfdiOut.uploadRequest(77, 1000))
+        assertFrame("12 00 8B 13 4D 00 E8 03 00 00 6A 01 00 00 EF BE", GfdiOut.uploadRequest(77, 1000, offset = 362, crcSeed = 0xBEEF))
+    }
+
+    @Test
+    fun `outgoing file transfer data frame`() {
+        // 5004: flags 0, crc 0xBEEF, offset 362, three bytes
+        assertFrame("10 00 8C 13 00 EF BE 6A 01 00 00 01 02 03", GfdiOut.fileTransferData(362, 0xBEEF, byteArrayOf(1, 2, 3)))
+        assertEquals(13, GfdiOut.FILE_TRANSFER_DATA_OVERHEAD)
+    }
+
+    @Test
+    fun `set file flag delete`() {
+        assertFrame("09 00 90 13 4D 00 20", GfdiOut.setFileFlag(77, FileFlag.DELETE))
+    }
+
+    @Test
+    fun `create file status parses`() {
+        val ok = GfdiParser.parse(GfdiId.RESPONSE, hex("8D 13 00 00 4D 00 80 05 05 00")) as GfdiMessage.CreateFileStatus
+        assertEquals(GfdiMessage.CreateFileStatus(0, CreateStatus.OK, 77, 128, 5, 5), ok)
+        assertTrue(ok.ok)
+        val dup = GfdiParser.parse(GfdiId.RESPONSE, hex("8D 13 00 01 00 00 80 05 00 00")) as GfdiMessage.CreateFileStatus
+        assertEquals(CreateStatus.DUPLICATE, dup.createStatus)
+        assertTrue(!dup.ok)
+        val full = GfdiParser.parse(GfdiId.RESPONSE, hex("8D 13 00 04 00 00 80 05 00 00")) as GfdiMessage.CreateFileStatus
+        assertEquals(CreateStatus.NO_SLOTS, full.createStatus)
+        // A bare NAK without the create fields falls back to the generic status.
+        val nak = GfdiParser.parse(GfdiId.RESPONSE, hex("8D 13 01")) as GfdiMessage.GenericStatus
+        assertEquals(GfdiId.CREATE_FILE, nak.originalId)
+        assertEquals(GfdiStatus.NAK, nak.status)
+    }
+
+    @Test
+    fun `upload request status parses`() {
+        val ok = GfdiParser.parse(GfdiId.RESPONSE, hex("8B 13 00 00 00 00 00 00 E8 03 00 00 00 00")) as GfdiMessage.UploadRequestStatus
+        assertEquals(GfdiMessage.UploadRequestStatus(0, UploadStatus.OK, 0, 1000, 0), ok)
+        assertTrue(ok.ok)
+        val busy = GfdiParser.parse(GfdiId.RESPONSE, hex("8B 13 00 05 6A 01 00 00 00 00 00 00 EF BE")) as GfdiMessage.UploadRequestStatus
+        assertEquals(UploadStatus.NOT_READY, busy.uploadStatus)
+        assertEquals(362L, busy.offset)
+        assertEquals(0xBEEF, busy.crcSeed)
+        assertTrue(!busy.ok)
+    }
+
+    @Test
+    fun `transfer data status for our chunks parses`() {
+        val ok = GfdiParser.parse(GfdiId.RESPONSE, hex("8C 13 00 00 6A 01 00 00")) as GfdiMessage.FileTransferDataStatus
+        assertEquals(GfdiMessage.FileTransferDataStatus(0, TransferStatus.OK, 362), ok)
+        val resend = GfdiParser.parse(GfdiId.RESPONSE, hex("8C 13 00 01 00 00 00 00")) as GfdiMessage.FileTransferDataStatus
+        assertEquals(TransferStatus.RESEND, resend.transferStatus)
+        val crc = GfdiParser.parse(GfdiId.RESPONSE, hex("8C 13 00 03 6A 01 00 00")) as GfdiMessage.FileTransferDataStatus
+        assertEquals(TransferStatus.CRC_MISMATCH, crc.transferStatus)
+        assertEquals(362L, crc.nextOffset)
+    }
+
+    @Test
+    fun `workout capability bit and status names`() {
+        assertEquals(18, Capabilities.WORKOUT_DOWNLOAD)
+        assertTrue(Capabilities.has(byteArrayOf(0, 0, 0x04), Capabilities.WORKOUT_DOWNLOAD))
+        assertTrue(!Capabilities.has(byteArrayOf(0x38, 0), Capabilities.WORKOUT_DOWNLOAD))
+        assertEquals("NO_SPACE_FOR_TYPE", CreateStatus.name(5))
+        assertEquals("CRC_INCORRECT", UploadStatus.name(6))
+        assertEquals("SYNC_PAUSED", TransferStatus.name(5))
+    }
 }

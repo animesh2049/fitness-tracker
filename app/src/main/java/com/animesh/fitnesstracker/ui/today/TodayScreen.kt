@@ -12,17 +12,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +43,7 @@ import com.animesh.fitnesstracker.ui.components.AccentChipButton
 import com.animesh.fitnesstracker.ui.components.AppCard
 import com.animesh.fitnesstracker.ui.components.BottomActionBar
 import com.animesh.fitnesstracker.ui.components.EmptyState
+import com.animesh.fitnesstracker.ui.components.GhostButton
 import com.animesh.fitnesstracker.ui.components.OutlineChipButton
 import com.animesh.fitnesstracker.ui.components.PillTag
 import com.animesh.fitnesstracker.ui.components.PrimaryButton
@@ -59,6 +64,7 @@ fun TodayScreen(
     val container = appContainer()
     val vm: TodayViewModel = viewModel { TodayViewModel(container) }
     val state by vm.state.collectAsStateWithLifecycle()
+    val sendSheet by vm.sendSheet.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { vm.sessionStarted.collect { onOpenSession(it) } }
 
@@ -133,9 +139,60 @@ fun TodayScreen(
                             SecondaryButton("Rest today", vm::restToday, Modifier.weight(1f), height = 44)
                             SecondaryButton("Swap", vm::openSwap, Modifier.weight(1f), height = 44)
                         }
+                        if (state.canSendToWatch) GhostButton("Send to watch", vm::openSendSheet, Modifier.fillMaxWidth())
                     }
                 }
             }
+        }
+    }
+
+    sendSheet?.let { SendToWatchSheet(it, state.watch?.name ?: "watch", vm) }
+}
+
+/** Preview of the workout as the watch will show it, with Send (Bluetooth) and Save file (USB fallback). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SendToWatchSheet(sheet: SendSheetState, watchName: String, vm: TodayViewModel) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val saveFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri -> uri?.let(vm::saveWorkoutFile) }
+    ModalBottomSheet(onDismissRequest = vm::closeSendSheet, sheetState = sheetState, containerColor = Tokens.Surface) {
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Send to watch", style = MaterialTheme.typography.headlineSmall, color = Tokens.Text)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(sheet.workoutName, style = MaterialTheme.typography.titleMedium, color = Tokens.Accent, modifier = Modifier.weight(1f))
+                sheet.encoded?.let { Text("${it.stepCount} steps · ${it.bytes.size} bytes", style = MonoNumber.copy(fontSize = 12.sp), color = Tokens.Muted) }
+            }
+            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(sheet.rows) { row ->
+                    AppCard(background = Tokens.Ground, padding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)) {
+                        Text(row.name, style = MaterialTheme.typography.titleSmall, color = Tokens.Text)
+                        Text(row.mappingLabel, style = MaterialTheme.typography.bodySmall, color = Tokens.Muted)
+                        Text(row.setsLabel, style = MonoNumber.copy(fontSize = 12.sp), color = Tokens.TextSoft)
+                    }
+                }
+            }
+            sheet.encodeError?.let { Text("Could not build the file: $it", style = MaterialTheme.typography.bodySmall, color = Tokens.Danger) }
+            Text(
+                "Replaces the last workout sent from this app; find it on the watch under Training, Workouts.",
+                style = MaterialTheme.typography.bodySmall, color = Tokens.Muted
+            )
+            when (val p = sheet.phase) {
+                SendPhase.Preview -> Unit
+                is SendPhase.Sending -> Text(p.text, style = MaterialTheme.typography.bodyMedium, color = Tokens.AccentText)
+                is SendPhase.Sent -> Text(p.text, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium), color = Tokens.Accent)
+                is SendPhase.Failed -> Text(p.text, style = MaterialTheme.typography.bodyMedium, color = Tokens.Danger)
+            }
+            val sending = sheet.phase is SendPhase.Sending
+            PrimaryButton(
+                when {
+                    sending -> "Sending to $watchName"
+                    sheet.phase is SendPhase.Sent -> "Send again"
+                    else -> "Send"
+                },
+                vm::sendToWatch, enabled = sheet.canSend
+            )
+            GhostButton("Save file instead", { if (sheet.encoded != null) saveFile.launch(sheet.fileName) }, Modifier.fillMaxWidth())
+            sheet.saved?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = if (it.startsWith("Save failed")) Tokens.Danger else Tokens.Muted) }
         }
     }
 }

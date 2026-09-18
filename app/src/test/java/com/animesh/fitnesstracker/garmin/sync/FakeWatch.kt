@@ -29,7 +29,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 /**
  * A scripted Forerunner: a [Transport] that speaks Multi-Link (optionally with MLR), runs the
  * watch side of the GFDI handshake and serves a directory plus chunked file bodies, with optional CRC
- * corruption, a mid-session SYNCHRONIZATION push and a FILE_AVAILABLE push.
+ * corruption, a mid-session SYNCHRONIZATION push and a FILE_AVAILABLE push. It also accepts workout
+ * uploads (CREATE_FILE, UPLOAD_REQUEST, incoming FILE_TRANSFER_DATA) with a scripted create status and a
+ * one-time RESEND or CRC_MISMATCH, and records SET_FILE_FLAG(DELETE) in [deleted].
  */
 class FakeWatch(
     files: Map<Int, FakeFile>,
@@ -44,12 +46,28 @@ class FakeWatch(
     private val reliable: Boolean = false,
     private val silent: Boolean = false,
     private val dropAfterBytes: Int? = null,
-    private val stallDownloads: Boolean = false
+    private val stallDownloads: Boolean = false,
+    /** Advertise capability bit 18 and list 128/5 in SUPPORTED_FILE_TYPES. */
+    private val supportsWorkouts: Boolean = true,
+    /** createStatus of the CREATE_FILE reply (0 OK, 1 DUPLICATE, 4 NO_SLOTS, ...). */
+    private val createStatus: Int = 0,
+    /** Directory index assigned to an uploaded file. */
+    private val createdIndex: Int = 77,
+    /** Answer the n-th received upload chunk (0-based) once with RESEND from the start of the previous chunk. */
+    private val resendAtChunk: Int? = null,
+    /** Answer the n-th received upload chunk (0-based) once with CRC_MISMATCH. */
+    private val crcMismatchAtChunk: Int? = null
 ) : Transport {
     data class FakeFile(val subType: Int, val garminTimestamp: Long, val bytes: ByteArray, val dataType: Int = 128)
 
     val directory: MutableMap<Int, FakeFile> = files.toMutableMap()
     val archived = LinkedHashSet<Int>()
+    /** Indexes the phone asked to delete with SET_FILE_FLAG(DELETE). */
+    val deleted = LinkedHashSet<Int>()
+    /** Complete files the phone uploaded, by the index the watch assigned. */
+    val uploaded = LinkedHashMap<Int, ByteArray>()
+    /** Every incoming FILE_TRANSFER_DATA chunk as (offset, size), accepted or not. */
+    val uploadChunks = ArrayList<Pair<Int, Int>>()
     /** Every GFDI message the phone sent, as (id, payload), in order. */
     val received = ArrayList<Pair<Int, ByteArray>>()
     val systemEvents = ArrayList<Int>()
@@ -68,6 +86,17 @@ class FakeWatch(
     private var mlr: MlrChannel? = null
     private var download: Download? = null
     private var corrupted = false
+    private var upload: Upload? = null
+
+    private class Upload(val index: Int, val size: Int) {
+        val buf = ByteArray(size)
+        var offset = 0
+        var crc = 0
+        var chunkNo = 0
+        var lastChunkStart = 0
+        var didResend = false
+        var didCrcMismatch = false
+    }
 
     private class Download(val index: Int, val bytes: ByteArray) {
         var offset = 0
@@ -150,10 +179,12 @@ class FakeWatch(
                 sendGfdi(5039, byteArrayOf(5)) // FIND_MY_PHONE_REQUEST, which we do not support
                 sendProtobufRequest(0x301, GarminProto.connectedNotification())
             }
-            GfdiId.SUPPORTED_FILE_TYPES_REQUEST -> sendGfdi(
-                GfdiId.RESPONSE,
-                LeWriter().u16(id).u8(GfdiStatus.ACK).u8(3).u8(128).u8(4).string("FIT_TYPE_4").u8(128).u8(32).string("FIT_TYPE_32").u8(128).u8(49).string("FIT_TYPE_49").toByteArray()
-            )
+            GfdiId.SUPPORTED_FILE_TYPES_REQUEST -> {
+                val types = listOf(4, 32, 49) + if (supportsWorkouts) listOf(5) else emptyList()
+                val w = LeWriter().u16(id).u8(GfdiStatus.ACK).u8(types.size)
+                for (t in types) w.u8(128).u8(t).string("FIT_TYPE_$t")
+                sendGfdi(GfdiId.RESPONSE, w.toByteArray())
+            }
             GfdiId.DEVICE_SETTINGS -> ack(id)
             GfdiId.SYSTEM_EVENT -> {
                 val event = r.u8()
@@ -193,6 +224,10 @@ class FakeWatch(
                     archived.add(index)
                     directory.remove(index)
                 }
+                if (flags and 0x20 != 0) {
+                    deleted.add(index)
+                    directory.remove(index)
+                }
                 sendGfdi(GfdiId.RESPONSE, LeWriter().u16(id).u8(GfdiStatus.ACK).u8(0).u16(index).u8(flags).toByteArray())
                 if (index == syncPushAfterArchiveOf) {
                     directory.putAll(lateFiles)
@@ -203,6 +238,72 @@ class FakeWatch(
                     sendGfdi(GfdiId.FILE_AVAILABLE, entryBytes(availableFile.first, availableFile.second))
                 }
             }
+            GfdiId.CREATE_FILE -> {
+                val size = r.u32().toInt()
+                val dataType = r.u8()
+                val subType = r.u8()
+                if (createStatus != 0) {
+                    sendGfdi(GfdiId.RESPONSE, LeWriter().u16(id).u8(GfdiStatus.ACK).u8(createStatus).u16(0).u8(dataType).u8(subType).u16(0).toByteArray())
+                } else {
+                    upload = Upload(createdIndex, size)
+                    sendGfdi(GfdiId.RESPONSE, LeWriter().u16(id).u8(GfdiStatus.ACK).u8(0).u16(createdIndex).u8(dataType).u8(subType).u16(createdIndex).toByteArray())
+                }
+            }
+            GfdiId.UPLOAD_REQUEST -> {
+                val index = r.u16()
+                val size = r.u32()
+                val u = upload
+                if (u == null || u.index != index) {
+                    sendGfdi(GfdiId.RESPONSE, LeWriter().u16(id).u8(GfdiStatus.ACK).u8(1).u32(0).u32(0).u16(0).toByteArray())
+                } else {
+                    sendGfdi(GfdiId.RESPONSE, LeWriter().u16(id).u8(GfdiStatus.ACK).u8(0).u32(0).u32(maxOf(size, u.size.toLong())).u16(0).toByteArray())
+                }
+            }
+            GfdiId.FILE_TRANSFER_DATA -> onUploadChunk(r)
+        }
+    }
+
+    /** The watch side of an upload chunk: offset and running CRC checks plus the scripted one-time replies. */
+    private fun onUploadChunk(r: LeReader) {
+        val u = upload ?: return
+        r.u8() // flags
+        val sentCrc = r.u16()
+        val offset = r.u32().toInt()
+        val data = r.rest()
+        uploadChunks.add(offset to data.size)
+        val k = u.chunkNo++
+        fun reply(status: Int, next: Int) =
+            sendGfdi(GfdiId.RESPONSE, LeWriter().u16(GfdiId.FILE_TRANSFER_DATA).u8(GfdiStatus.ACK).u8(status).u32(next.toLong()).toByteArray())
+        if (offset != u.offset) {
+            reply(TransferStatus.OFFSET_MISMATCH, u.offset)
+            return
+        }
+        if (k == resendAtChunk && !u.didResend) {
+            u.didResend = true
+            u.offset = u.lastChunkStart
+            u.crc = Crc16.compute(u.buf, 0, u.offset)
+            reply(TransferStatus.RESEND, u.offset)
+            return
+        }
+        if (k == crcMismatchAtChunk && !u.didCrcMismatch) {
+            u.didCrcMismatch = true
+            reply(TransferStatus.CRC_MISMATCH, u.offset)
+            return
+        }
+        val expected = Crc16.compute(data, seed = u.crc)
+        if (expected != sentCrc) {
+            reply(TransferStatus.CRC_MISMATCH, u.offset)
+            return
+        }
+        System.arraycopy(data, 0, u.buf, offset, data.size)
+        u.lastChunkStart = offset
+        u.offset = offset + data.size
+        u.crc = expected
+        reply(TransferStatus.OK, u.offset)
+        if (u.offset >= u.size) {
+            uploaded[u.index] = u.buf.copyOf()
+            directory[u.index] = FakeFile(5, 0, u.buf.copyOf())
+            upload = null
         }
     }
 
@@ -212,7 +313,7 @@ class FakeWatch(
         when (originalId) {
             GfdiId.DEVICE_INFORMATION -> {
                 deviceInfoReply = payload
-                sendGfdi(GfdiId.CONFIGURATION, LeWriter().u8(2).u8(0x38).u8(0x00).toByteArray())
+                sendGfdi(GfdiId.CONFIGURATION, LeWriter().u8(3).u8(0x38).u8(0x00).u8(if (supportsWorkouts) 0x04 else 0x00).toByteArray())
             }
             GfdiId.CURRENT_TIME_REQUEST -> currentTimeReply = payload
             GfdiId.FILE_TRANSFER_DATA -> {

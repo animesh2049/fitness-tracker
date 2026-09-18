@@ -12,6 +12,7 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import com.animesh.fitnesstracker.garmin.ble.GattClient
 import com.animesh.fitnesstracker.garmin.gfdi.PhoneInfo
+import com.animesh.fitnesstracker.garmin.workout.EncodedWorkout
 import com.animesh.fitnesstracker.service.GarminSyncService
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +35,8 @@ class WatchController(
     private val importHook: ImportHook,
     private val scope: CoroutineScope,
     private val prefs: WatchPrefs = WatchPrefs(context),
-    val syncLog: SyncLog = SyncLog(File(context.filesDir, "garmin/sync.log"))
+    val syncLog: SyncLog = SyncLog(File(context.filesDir, "garmin/sync.log")),
+    private val outbox: WorkoutOutbox = WorkoutOutbox(File(context.filesDir, "garmin/outbox"))
 ) : WatchGateway {
     init {
         SyncRuntime.controller = this
@@ -55,6 +57,27 @@ class WatchController(
         ContextCompat.startForegroundService(
             context, Intent(context, GarminSyncService::class.java).setAction(GarminSyncService.ACTION_SYNC)
         )
+    }
+
+    override fun requestWorkoutUpload(encoded: EncodedWorkout, planName: String): Boolean {
+        if (prefs.current == null) {
+            syncLog.log("Workout push not started: no watch paired")
+            return false
+        }
+        if (SyncRuntime.isRunning) {
+            syncLog.log("Workout push not started: a sync is already running")
+            return false
+        }
+        if (!BluetoothPermissions.granted(context)) {
+            syncLog.log("Workout push not started: Bluetooth permission missing")
+            return false
+        }
+        outbox.put(PendingWorkoutUpload(encoded.bytes, planName))
+        syncLog.log("Workout push queued: $planName (${encoded.bytes.size} bytes, ${encoded.stepCount} steps)")
+        ContextCompat.startForegroundService(
+            context, Intent(context, GarminSyncService::class.java).setAction(GarminSyncService.ACTION_UPLOAD_WORKOUT)
+        )
+        return true
     }
 
     override fun cancelSync() {
@@ -139,6 +162,34 @@ class WatchController(
                 lastBatteryPercent = outcome.batteryPercent ?: it.lastBatteryPercent,
                 unitId = outcome.unitId ?: it.unitId,
                 firmwareVersion = outcome.firmwareVersion ?: it.firmwareVersion
+            )
+        }
+        return outcome
+    }
+
+    /**
+     * Pushes the workout waiting in the [WorkoutOutbox] to the paired watch, deleting the previously pushed
+     * index first. Success records the new index, name and time next to the usual handshake facts.
+     */
+    suspend fun runUpload(): SyncSession.Outcome? {
+        val w = prefs.current ?: return null
+        val pending = outbox.take()
+        if (pending == null) {
+            syncLog.log("Workout push skipped: nothing waiting to be sent")
+            return null
+        }
+        val upload = SyncSession.WorkoutUpload(pending.bytes, pending.name, w.lastPushedWorkoutIndex)
+        val outcome = newSession().runUpload(w, !w.firstConnectDone, upload) { SyncRuntime.state.value = it }
+        val now = System.currentTimeMillis()
+        prefs.update {
+            it.copy(
+                firstConnectDone = it.firstConnectDone || outcome.success || outcome.unitId != null,
+                lastBatteryPercent = outcome.batteryPercent ?: it.lastBatteryPercent,
+                unitId = outcome.unitId ?: it.unitId,
+                firmwareVersion = outcome.firmwareVersion ?: it.firmwareVersion,
+                lastPushedWorkoutIndex = outcome.uploadedIndex ?: it.lastPushedWorkoutIndex,
+                lastPushedWorkoutName = if (outcome.uploadedIndex != null) pending.name else it.lastPushedWorkoutName,
+                lastPushedAtMillis = if (outcome.uploadedIndex != null) now else it.lastPushedAtMillis
             )
         }
         return outcome
