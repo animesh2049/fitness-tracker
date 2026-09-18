@@ -230,11 +230,27 @@ internal object FitFieldDecoder {
         return if (count == 1) values[0] else values
     }
 
-    private fun readString(reader: FitByteReader, size: Int): String? {
+    /**
+     * A string field holds one NUL-terminated UTF-8 string, or several back to back when the profile
+     * declares an array (exercise_title.wkt_step_name). One string decodes to a String, several to
+     * a List of Strings, none (first byte NUL) to null.
+     */
+    private fun readString(reader: FitByteReader, size: Int): Any? {
         val bytes = reader.slice(size, "string")
-        val end = bytes.indexOf(0).let { if (it < 0) bytes.size else it }
-        if (end == 0) return null
-        return String(bytes, 0, end, Charsets.UTF_8)
+        val strings = ArrayList<String>(1)
+        var start = 0
+        while (start < bytes.size) {
+            var end = start
+            while (end < bytes.size && bytes[end] != 0.toByte()) end++
+            if (end == start) break
+            strings += String(bytes, start, end - start, Charsets.UTF_8)
+            start = end + 1
+        }
+        return when (strings.size) {
+            0 -> null
+            1 -> strings[0]
+            else -> strings
+        }
     }
 
     /** Byte fields are opaque: invalid only when every byte is 0xFF, otherwise all bytes are kept. */

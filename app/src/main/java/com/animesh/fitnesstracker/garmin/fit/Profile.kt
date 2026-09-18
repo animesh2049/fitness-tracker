@@ -46,6 +46,7 @@ internal object Mesg {
     const val RECORD = 20
     const val EVENT = 21
     const val WORKOUT = 26
+    const val WORKOUT_STEP = 27
     const val ACTIVITY = 34
     const val MONITORING = 55
     const val MONITORING_INFO = 103
@@ -55,10 +56,12 @@ internal object Mesg {
     const val DEVELOPER_DATA_ID = 207
     const val MONITORING_HR_DATA = 211
     const val TIME_IN_ZONE = 216
+    const val SET = 225
     const val STRESS_LEVEL = 227
     const val MAX_MET_DATA = 229
     const val SPO2_DATA = 269
     const val SLEEP_LEVEL = 275
+    const val EXERCISE_TITLE = 264
     const val METRIC_RECOVERY = 284
     const val RESPIRATION_RATE = 297
     const val RACE_PREDICTION = 339
@@ -219,8 +222,26 @@ internal object Profile {
         ),
         msg(
             Mesg.WORKOUT, "workout",
-            f(4, "sport"), f(5, "capabilities"), f(6, "num_valid_steps"), str(8, "name"), f(11, "sub_sport"),
+            f(4, "sport"), f(5, "capabilities"), f(6, "num_valid_steps"), str(8, "wkt_name"), f(11, "sub_sport"),
             f(14, "pool_length", 100.0, unit = M), f(15, "pool_length_unit"), str(17, "notes"), idx()
+        ),
+        msg(
+            Mesg.WORKOUT_STEP, "workout_step",
+            str(0, "wkt_step_name"), f(1, "duration_type"), f(2, "duration_value"), f(3, "target_type"), f(4, "target_value"),
+            f(5, "custom_target_value_low"), f(6, "custom_target_value_high"), f(7, "intensity"), str(8, "notes"), f(9, "equipment"),
+            f(10, "exercise_category"), f(11, "exercise_name"), f(12, "exercise_weight", 100.0, unit = "kg"), f(13, "weight_display_unit"),
+            f(19, "secondary_target_type"), f(20, "secondary_target_value"), f(21, "secondary_custom_target_value_low"),
+            f(22, "secondary_custom_target_value_high"), idx()
+        ),
+        msg(
+            Mesg.EXERCISE_TITLE, "exercise_title",
+            f(0, "exercise_category"), f(1, "exercise_name"), str(2, "wkt_step_name"), idx()
+        ),
+        msg(
+            Mesg.SET, "set",
+            f(0, "duration", 1000.0, unit = S), f(3, "repetitions"), f(4, "weight", 16.0, unit = "kg"), f(5, "set_type"),
+            ts(6, "start_time"), f(7, "category"), f(8, "category_subtype"), f(9, "weight_display_unit"), f(10, "message_index"),
+            f(11, "wkt_step_index"), ts(254, "timestamp")
         ),
         msg(
             Mesg.ACTIVITY, "activity",
