@@ -274,6 +274,7 @@ class HealthTodayViewModel(private val c: AppContainer) : ViewModel() {
             SyncState.Listing -> "Listing files…"
             is SyncState.Downloading -> "Downloading file ${(sync.done + 1).coerceAtMost(sync.total)} of ${sync.total} · ${sync.fileLabel}"
             SyncState.Importing -> "Importing…"
+            is SyncState.Uploading -> "Sending ${sync.label} to the watch…"
             is SyncState.Failed -> if (visibleFailureAt != null) "Sync failed · ${sync.reason}" else restLine(watch, files, now)
             else -> restLine(watch, files, now)
         }

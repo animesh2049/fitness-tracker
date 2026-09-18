@@ -10,6 +10,8 @@ object Capabilities {
     const val SYNC = 3
     const val DEVICE_INITIATES_SYNC = 4
     const val HOST_INITIATED_SYNC_REQUESTS = 5
+    /** The watch accepts workout files (128/5) pushed by the phone. */
+    const val WORKOUT_DOWNLOAD = 18
     const val CURRENT_TIME_REQUEST_SUPPORT = 71
     const val MULTI_LINK_SERVICE = 76
     const val COUNT = 120

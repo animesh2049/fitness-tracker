@@ -31,6 +31,9 @@ class WatchPrefs(private val prefs: SharedPreferences) {
             .putBoolean(KEY_AUTO_SYNC, info.autoSyncOnOpen)
             .putInt(KEY_BG_HOURS, info.backgroundSyncHours)
             .putBoolean(KEY_KEEP_CONNECTED, info.keepConnectedDuringSessions)
+            .apply { if (info.lastPushedWorkoutIndex != null) putInt(KEY_PUSHED_INDEX, info.lastPushedWorkoutIndex) else remove(KEY_PUSHED_INDEX) }
+            .apply { if (info.lastPushedWorkoutName != null) putString(KEY_PUSHED_NAME, info.lastPushedWorkoutName) else remove(KEY_PUSHED_NAME) }
+            .apply { if (info.lastPushedAtMillis != null) putLong(KEY_PUSHED_AT, info.lastPushedAtMillis) else remove(KEY_PUSHED_AT) }
             .apply()
         _watch.value = info
     }
@@ -62,7 +65,10 @@ class WatchPrefs(private val prefs: SharedPreferences) {
             lastBatteryPercent = if (prefs.contains(KEY_BATTERY)) prefs.getInt(KEY_BATTERY, 0) else null,
             autoSyncOnOpen = prefs.getBoolean(KEY_AUTO_SYNC, true),
             backgroundSyncHours = prefs.getInt(KEY_BG_HOURS, 0),
-            keepConnectedDuringSessions = prefs.getBoolean(KEY_KEEP_CONNECTED, false)
+            keepConnectedDuringSessions = prefs.getBoolean(KEY_KEEP_CONNECTED, false),
+            lastPushedWorkoutIndex = if (prefs.contains(KEY_PUSHED_INDEX)) prefs.getInt(KEY_PUSHED_INDEX, 0) else null,
+            lastPushedWorkoutName = prefs.getString(KEY_PUSHED_NAME, null),
+            lastPushedAtMillis = if (prefs.contains(KEY_PUSHED_AT)) prefs.getLong(KEY_PUSHED_AT, 0) else null
         )
     }
 
@@ -78,5 +84,8 @@ class WatchPrefs(private val prefs: SharedPreferences) {
         const val KEY_AUTO_SYNC = "auto_sync_on_open"
         const val KEY_BG_HOURS = "background_sync_hours"
         const val KEY_KEEP_CONNECTED = "keep_connected"
+        const val KEY_PUSHED_INDEX = "pushed_workout_index"
+        const val KEY_PUSHED_NAME = "pushed_workout_name"
+        const val KEY_PUSHED_AT = "pushed_workout_at"
     }
 }

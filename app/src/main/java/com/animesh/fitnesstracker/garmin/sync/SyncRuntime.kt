@@ -16,5 +16,8 @@ object SyncRuntime {
 
     @Volatile var activeJob: Job? = null
 
+    /** The workout waiting for the upload service, set by [WatchController.requestWorkoutUpload]; see [WorkoutOutbox]. */
+    @Volatile var pendingUpload: PendingWorkoutUpload? = null
+
     val isRunning: Boolean get() = state.value.isRunning || activeJob?.isActive == true
 }

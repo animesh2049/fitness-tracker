@@ -24,6 +24,32 @@ object GfdiOut {
     fun downloadRequest(index: Int, offset: Long = 0, newRequest: Boolean = true, crcSeed: Int = 0, size: Long = 0): ByteArray =
         frame(GfdiId.DOWNLOAD_REQUEST, LeWriter().u16(index).u32(offset).u8(if (newRequest) 1 else 0).u16(crcSeed).u32(size).u8(0))
 
+    /**
+     * CREATE_FILE (5005): `u32 size, u8 dataType, u8 subType, u16 fileIndex 0 (watch chooses), u8 reserved 0,
+     * u8 subTypeMask 0, u16 numberMask 0xFFFF, u16 pathLength 0, u64 fileId`. 128/5 is a workout FIT file.
+     */
+    fun createFile(size: Long, dataType: Int = FitFileType.DATA_TYPE_FIT, subType: Int = FitFileType.WORKOUT, fileId: Long = randomFileId()): ByteArray =
+        frame(
+            GfdiId.CREATE_FILE,
+            LeWriter().u32(size).u8(dataType).u8(subType).u16(0).u8(0).u8(0).u16(0xFFFF).u16(0).u64(fileId)
+        )
+
+    /** UPLOAD_REQUEST (5003): `u16 fileIndex, u32 size, u32 dataOffset, u16 crcSeed`. */
+    fun uploadRequest(fileIndex: Int, size: Long, offset: Long = 0, crcSeed: Int = 0): ByteArray =
+        frame(GfdiId.UPLOAD_REQUEST, LeWriter().u16(fileIndex).u32(size).u32(offset).u16(crcSeed))
+
+    /**
+     * Outgoing FILE_TRANSFER_DATA (5004): `u8 flags 0, u16 runningCrc, u32 offset, bytes`. The CRC is
+     * CRC-16 over every file byte sent so far, this chunk included.
+     */
+    fun fileTransferData(offset: Long, runningCrc: Int, chunk: ByteArray): ByteArray =
+        frame(GfdiId.FILE_TRANSFER_DATA, LeWriter().u8(0).u16(runningCrc).u32(offset).bytes(chunk))
+
+    /** Frame overhead of one outgoing FILE_TRANSFER_DATA: 2 length + 2 id + 1 flags + 2 crc + 4 offset + 2 frame CRC. */
+    const val FILE_TRANSFER_DATA_OVERHEAD = 13
+
+    private fun randomFileId(): Long = java.security.SecureRandom().nextLong()
+
     /** RESPONSE(5004): `u8 ACK, u8 transferStatus, u32 nextOffset`. */
     fun fileTransferDataStatus(transferStatus: Int, nextOffset: Long): ByteArray =
         frame(GfdiId.RESPONSE, LeWriter().u16(GfdiId.FILE_TRANSFER_DATA).u8(GfdiStatus.ACK).u8(transferStatus).u32(nextOffset))
