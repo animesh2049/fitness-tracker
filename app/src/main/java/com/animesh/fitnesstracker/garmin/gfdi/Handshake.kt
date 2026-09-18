@@ -29,6 +29,9 @@ class Handshake(
         private set
     var supportedTypes: List<FileTypeInfo>? = null
         private set
+
+    /** True when the watch listed `dataType/subType` in SUPPORTED_FILE_TYPES; null when it never answered. */
+    fun supportsFileType(dataType: Int, subType: Int): Boolean? = supportedTypes?.any { it.dataType == dataType && it.subType == subType }
     var configuredAtMillis: Long? = null
         private set
 
@@ -101,7 +104,8 @@ class Handshake(
             is GfdiMessage.ProtobufStatus -> if (msg.status != GfdiStatus.ACK || msg.chunkStatus != ProtobufChunkStatus.KEPT) {
                 log("Protobuf #${msg.requestId} status ${msg.status}/${msg.chunkStatus}/${msg.code}")
             }
-            is GfdiMessage.DownloadRequestStatus, is GfdiMessage.FileTransferDataStatus, is GfdiMessage.SetFileFlagStatus -> Unit
+            is GfdiMessage.DownloadRequestStatus, is GfdiMessage.FileTransferDataStatus, is GfdiMessage.SetFileFlagStatus,
+            is GfdiMessage.CreateFileStatus, is GfdiMessage.UploadRequestStatus -> Unit
             is GfdiMessage.FileTransferData -> {
                 // A chunk nobody asked for: tell the watch to stop instead of leaving it waiting for an ACK.
                 send(GfdiOut.fileTransferDataStatus(TransferStatus.ABORT, 0))

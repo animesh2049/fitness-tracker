@@ -50,6 +50,7 @@ class GarminSyncService : LifecycleService() {
             return START_NOT_STICKY
         }
         if (job?.isActive == true) return START_NOT_STICKY
+        val upload = intent?.action == ACTION_UPLOAD_WORKOUT
         startInForeground(buildNotification(text(SyncState.Connecting, watchName), SyncState.Connecting))
         observer = lifecycleScope.launch {
             SyncRuntime.state.collect { notify(buildNotification(text(it, watchName), it)) }
@@ -57,7 +58,7 @@ class GarminSyncService : LifecycleService() {
         job = lifecycleScope.launch {
             SyncRuntime.activeJob = coroutineContext[Job]
             try {
-                controller.runSync()
+                if (upload) controller.runUpload() else controller.runSync()
             } finally {
                 if (SyncRuntime.activeJob === coroutineContext[Job]) SyncRuntime.activeJob = null
                 stopForegroundAndSelf()
@@ -112,6 +113,8 @@ class GarminSyncService : LifecycleService() {
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
         if (state is SyncState.Downloading && state.total > 0) {
             builder.setProgress(state.total, state.done, false)
+        } else if (state is SyncState.Uploading && state.totalBytes > 0) {
+            builder.setProgress(state.totalBytes, state.sentBytes, false)
         } else if (state != null && state.isRunning) {
             builder.setProgress(0, 0, true)
         }
@@ -133,6 +136,8 @@ class GarminSyncService : LifecycleService() {
         const val NOTIFICATION_ID = 42
         const val ACTION_SYNC = "com.animesh.fitnesstracker.garmin.SYNC"
         const val ACTION_CANCEL = "com.animesh.fitnesstracker.garmin.CANCEL"
+        /** Pushes the workout waiting in the [com.animesh.fitnesstracker.garmin.sync.WorkoutOutbox]; the bytes never travel in the Intent. */
+        const val ACTION_UPLOAD_WORKOUT = "com.animesh.fitnesstracker.garmin.UPLOAD_WORKOUT"
 
         /** Notification text for a state, e.g. "Connecting to Forerunner 570" or "Downloading file 3 of 7". */
         fun text(state: SyncState, watchName: String): String = when (state) {
@@ -142,8 +147,16 @@ class GarminSyncService : LifecycleService() {
             SyncState.Listing -> "Listing files on $watchName"
             is SyncState.Downloading -> "Downloading file ${state.done + 1} of ${state.total}"
             SyncState.Importing -> "Importing"
-            is SyncState.Done -> if (state.newFiles == 0) "Up to date" else "Synced ${state.newFiles} new file(s)"
+            is SyncState.Uploading -> "Sending ${state.label} to $watchName: ${kb(state.sentBytes)} of ${kb(state.totalBytes)} KB"
+            is SyncState.Done -> when {
+                state.uploadedWorkout != null -> "Sent ${state.uploadedWorkout} to $watchName"
+                state.newFiles == 0 -> "Up to date"
+                else -> "Synced ${state.newFiles} new file(s)"
+            }
             is SyncState.Failed -> "Sync failed: ${state.reason}"
         }
+
+        /** Bytes as kilobytes with one decimal, "1.2". */
+        fun kb(bytes: Int): String = String.format(java.util.Locale.US, "%.1f", bytes / 1024.0)
     }
 }

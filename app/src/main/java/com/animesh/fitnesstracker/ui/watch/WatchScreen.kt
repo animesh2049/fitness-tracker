@@ -383,6 +383,13 @@ private fun StatusCard(state: WatchScreenState, watch: WatchInfo) {
             MiniStat("Files stored", state.filesLabel, Modifier.weight(1f))
             MiniStat("Data since", state.dataSinceLabel, Modifier.weight(1f))
         }
+        state.lastSentLabel?.let { sent ->
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Tokens.Surface2))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Last sent", style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp), color = Tokens.Muted)
+                Text(sent, style = MonoNumber.copy(fontSize = 12.sp), color = Tokens.TextSoft, maxLines = 1, modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
