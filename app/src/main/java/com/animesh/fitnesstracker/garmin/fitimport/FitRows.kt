@@ -155,7 +155,9 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
 
         val stress = fit.stress.mapNotNull { s ->
             val value = s.stress?.takeIf { it >= 0 }
-            if (value == null && s.bodyBattery == null) null else StressSample(s.timestamp, value, s.bodyBattery)
+            // The watch writes 127 for Body Battery in the first minutes off the wrist; only 0..100 is a reading.
+            val battery = s.bodyBattery?.takeIf { it in 0..100 }
+            if (value == null && battery == null) null else StressSample(s.timestamp, value, battery)
         }.distinctBy { it.timestamp }
 
         val fileTime = fit.fileId.timeCreated
