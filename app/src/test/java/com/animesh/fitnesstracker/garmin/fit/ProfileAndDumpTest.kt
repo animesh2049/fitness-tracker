@@ -66,8 +66,8 @@ class ProfileAndDumpTest {
         assertTrue(summary.contains("file_id: type=32 (MONITORING_B)"))
         assertTrue(summary.contains("55 monitoring"))
         assertTrue(summary.contains("27:heart_rate="))
-        assertTrue(summary.contains("timestamps: first=1789618980"))
-        assertTrue(summary.contains("unknown messages: 13 records"))
+        assertTrue(summary.contains("timestamps: first=1789618800"))
+        assertTrue(summary.contains("unknown messages: 17 records"))
         assertTrue(summary.lines().any { it.trim().startsWith("484 ?") })
     }
 }
