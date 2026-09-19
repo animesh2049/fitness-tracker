@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -23,7 +25,7 @@ android {
     // Release signing: when a gitignored keystore.properties exists next to this file
     // (storeFile, storePassword, keyAlias, keyPassword), release builds are signed with that key.
     // Without it they fall back to the debug key, which is fine for personal sideloads.
-    val keystoreProperties = java.util.Properties().apply {
+    val keystoreProperties = Properties().apply {
         val f = rootProject.file("keystore.properties")
         if (f.exists()) f.inputStream().use { load(it) }
     }
