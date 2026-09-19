@@ -12,3 +12,17 @@
 /.kotlin/
 /.claude/
 REQUIREMENTS.md
+
+# Release signing (never commit keys)
+keystore.properties
+*.jks
+*.keystore
+
+# Built APKs go to GitHub Releases, not the tree
+/app/release/
+
+# Assembled design canvases bundle a third-party editor; only the .dc.html sources and canvas.json are tracked
+design/workout-tracker-screens.html
+design/diet/workout-tracker-diet-planner.html
+design/health/fitness-tracker-garmin-health.html
+design/session2/fitness-tracker-session-navigation.html

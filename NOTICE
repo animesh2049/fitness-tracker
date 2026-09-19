@@ -1,0 +1,33 @@
+Fitness Tracker
+Copyright (C) 2026 Animesh
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. See LICENSE for the full text.
+
+Third-party work this project builds on
+----------------------------------------
+
+Gadgetbridge (https://gadgetbridge.org, https://codeberg.org/Freeyourgadget/Gadgetbridge)
+  Licensed under the GNU Affero General Public License v3.0.
+  The Garmin support in this app (packages com.animesh.fitnesstracker.garmin.ble,
+  .gfdi, .sync, .fit and .workout) was written in Kotlin for this project, but its
+  understanding of Garmin's Bluetooth protocol (Multi-Link handles, the reliable
+  channel, COBS framing, GFDI message ids and layouts, the file download and upload
+  sequences, the capability bitmap) and of the undocumented FIT messages the watch
+  writes (stress and Body Battery, sleep stages and scores, HRV status, training
+  metrics) comes from studying Gadgetbridge's implementation and its FIT profile.
+  That is why this project is released under the same license.
+
+Garmin FIT protocol (https://developer.garmin.com/fit/)
+  The FIT file format and the documented message profile are Garmin's public
+  specification. No Garmin SDK code is included. Garmin, Forerunner and Body
+  Battery are trademarks of Garmin Ltd. or its subsidiaries. This project is not
+  affiliated with or endorsed by Garmin.
+
+IBM Plex Sans and IBM Plex Mono (https://github.com/IBM/plex)
+  Licensed under the SIL Open Font License 1.1; see FONT_LICENSE_OFL.txt.
+
+Android Jetpack, Kotlin and kotlinx libraries
+  Licensed under the Apache License 2.0.

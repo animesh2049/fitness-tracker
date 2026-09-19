@@ -24,12 +24,32 @@ printf 'sdk.dir=/path/to/Android/Sdk\n' > local.properties
 JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ./gradlew assembleDebug
 ```
 
-The debug APK lands in `app/build/outputs/apk/debug/app-debug.apk`. A release build (`assembleRelease`) is minified and signed with the debug key so it can be sideloaded straight away; it lands in `app/build/outputs/apk/release/app-release.apk`.
+The debug APK lands in `app/build/outputs/apk/debug/app-debug.apk`. A release build (`assembleRelease`) is minified; it lands in `app/build/outputs/apk/release/app-release.apk`.
 
 Install on a phone with USB debugging enabled:
 
 ```
 adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+### Signing
+
+Android only lets an app be updated by an APK signed with the same key, so the key decides who can ship updates to an installed copy. Without any setup, release builds are signed with the local debug key, which is enough for building and sideloading your own copy. The published releases are signed with a release key that is not in the repository. To sign with your own key, create one once and describe it in a `keystore.properties` file in the project root (gitignored):
+
+```
+keytool -genkeypair -v -keystore release.jks -alias fitness-tracker -keyalg RSA -keysize 4096 -validity 10000
+printf 'storeFile=release.jks\nstorePassword=...\nkeyAlias=fitness-tracker\nkeyPassword=...\n' > keystore.properties
+```
+
+Keep the keystore and its passwords out of git and backed up somewhere safe: losing them means future releases cannot update existing installs. Switching an installed copy from one key to another requires uninstalling first; export a JSON backup and the watch data zip before you do, and import them into the new install.
+
+### Releases
+
+Built APKs are attached to GitHub Releases, not committed. Each release lists the SHA-256 of its APK and of the signing certificate so you can check what you downloaded:
+
+```
+sha256sum fitness-tracker-<version>.apk
+apksigner verify --print-certs fitness-tracker-<version>.apk
 ```
 
 ## Tests
@@ -52,6 +72,14 @@ JAVA_HOME=... ./gradlew connectedDebugAndroidTest  # Room DAO tests, needs an em
   - `ui/` Compose screens, one package per tab (`today`, `history`, `progress`, `plan` under Workout; `diet/`; `health/` and `watch/`), plus `theme/` and `components/`
   - `backup/` JSON and CSV export and import
 - `app/src/test/resources/fit/` FIT files copied from a Forerunner 570 over USB; the decoder and importer tests run against them.
+
+## Privacy
+
+The app declares no internet permission and no location permission, so nothing it stores can leave the phone through the app. Bluetooth is used only to talk to the paired watch. There are no accounts, no analytics and no crash reporting. Everything lives in the app's SQLite database and, for the watch, in raw FIT files under the app's private storage; the only ways data leaves are the export buttons, which write files where you choose.
+
+## How the Garmin part works, and its license
+
+The watch is spoken to directly over Bluetooth LE using Garmin's own device protocol (GFDI over the Multi-Link service), the same one the Garmin Connect app uses, with no Garmin account and no server involved. The app downloads the watch's FIT files (monitoring, sleep, HRV, metrics, activities), decodes them with its own FIT reader, and can upload a workout FIT file the other way. The protocol knowledge and the meaning of Garmin's undocumented FIT messages come from studying [Gadgetbridge](https://gadgetbridge.org), which is licensed under the AGPL-3.0. This project is therefore released under the **GNU Affero General Public License v3.0** as well; see `LICENSE` and `NOTICE`. Garmin, Forerunner and Body Battery are trademarks of Garmin Ltd.; this project is not affiliated with or endorsed by Garmin. It has only been used with a Forerunner 570.
 
 ## Fonts
 
