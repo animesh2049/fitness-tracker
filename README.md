@@ -34,7 +34,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 
 ### Signing
 
-Android only lets an app be updated by an APK signed with the same key, so the key decides who can ship updates to an installed copy. Without any setup, release builds are signed with the local debug key, which is enough for building and sideloading your own copy. The published releases are signed with a release key that is not in the repository. To sign with your own key, create one once and describe it in a `keystore.properties` file in the project root (gitignored):
+There are no prebuilt APKs: build and sign your own. Android only lets an app be updated by an APK signed with the same key, so the key decides who can ship updates to an installed copy. Without any setup, release builds are signed with the local debug key, which is enough for building and sideloading your own copy on your own phone. To sign with a key of your own that survives reinstalling the toolchain, create one once and describe it in a `keystore.properties` file in the project root (gitignored):
 
 ```
 keytool -genkeypair -v -keystore release.jks -alias fitness-tracker -keyalg RSA -keysize 4096 -validity 10000
@@ -43,14 +43,9 @@ printf 'storeFile=release.jks\nstorePassword=...\nkeyAlias=fitness-tracker\nkeyP
 
 Keep the keystore and its passwords out of git and backed up somewhere safe: losing them means future releases cannot update existing installs. Switching an installed copy from one key to another requires uninstalling first; export a JSON backup and the watch data zip before you do, and import them into the new install.
 
-### Releases
+### Versions
 
-Built APKs are attached to GitHub Releases, not committed. Each release lists the SHA-256 of its APK and of the signing certificate so you can check what you downloaded:
-
-```
-sha256sum fitness-tracker-<version>.apk
-apksigner verify --print-certs fitness-tracker-<version>.apk
-```
+Versions are git tags (`v0.4.0` and so on); check one out and build it. Nothing is downloaded at runtime and the app has no update mechanism, so moving to a newer version is a matter of building it and installing over the old one with the same key.
 
 ## Tests
 
