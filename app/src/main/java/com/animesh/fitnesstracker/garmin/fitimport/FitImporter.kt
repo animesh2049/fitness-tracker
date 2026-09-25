@@ -109,6 +109,7 @@ class FitImporter(
                 type == FitFileType.SLEEP -> importSleep(fit, touchedNights)
                 type == FitFileType.HRV_STATUS -> importHrv(fit, touchedNights)
                 type == FitFileType.METRICS -> importMetrics(fit, touchedNights)
+                type == FitFileType.SKIN_TEMP -> importSkinTemp(fit, touchedNights)
                 type == FitFileType.ACTIVITY -> importActivity(fit, path)
                 else -> FileResult()
             }
@@ -207,6 +208,13 @@ class FitImporter(
         return FileResult()
     }
 
+    private suspend fun importSkinTemp(fit: DecodedFit, touchedNights: MutableSet<Long>): FileResult {
+        val metrics = rows.skinTemp(fit)
+        if (metrics.isNotEmpty()) db.healthDao().insertMetrics(metrics)
+        touchedNights += rows.nightsTouchedByMetrics(metrics)
+        return FileResult()
+    }
+
     private suspend fun importActivity(fit: DecodedFit, path: String): FileResult {
         val dao = db.activityDao()
         val a = rows.activity(fit, path) ?: return FileResult()
@@ -232,6 +240,7 @@ class FitImporter(
             // The need for this night was announced the day before; the same day's row is the fallback.
             val need = dao.metric(MetricType.SLEEP_NEED, day - 1) ?: dao.metric(MetricType.SLEEP_NEED, day)
             val battery = dao.metric(MetricType.SLEEP_BODY_BATTERY, day)
+            val skin = dao.metric(MetricType.SKIN_TEMP, day)
             val updated = night.copy(
                 avgRespiration = dao.avgRespirationBetween(night.startTimestamp, night.endTimestamp + 1) ?: night.avgRespiration,
                 avgSpo2 = dao.avgSpo2Between(night.startTimestamp, night.endTimestamp + 1) ?: night.avgSpo2,
@@ -241,7 +250,8 @@ class FitImporter(
                 sleepNeedMin = need?.value?.toInt() ?: night.sleepNeedMin,
                 sleepBaselineMin = need?.extra?.toInt() ?: night.sleepBaselineMin,
                 bodyBatteryEnd = battery?.value?.toInt() ?: night.bodyBatteryEnd,
-                bodyBatteryStart = battery?.extra?.toInt() ?: night.bodyBatteryStart
+                bodyBatteryStart = battery?.extra?.toInt() ?: night.bodyBatteryStart,
+                skinTempDeviation = skin?.value ?: night.skinTempDeviation
             )
             if (updated != night) dao.updateSleepNight(updated)
         }

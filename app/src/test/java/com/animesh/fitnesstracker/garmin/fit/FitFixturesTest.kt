@@ -241,7 +241,11 @@ class FitFixturesTest {
         assertEquals(2, skin.size)
         assertEquals("0xFFFFFFFF sentinels in fields 1, 2 and 4 are dropped", setOf(253, 0, 3), skin.first().fields.keys)
         assertEquals("field 0 is the wall clock of the record, converted like any local timestamp", SyntheticFixtures.SLEEP_END - 7 * 3600, skin.first().fields[0])
-        assertEquals(1L, skin.first().fields[3])
+        assertEquals("calibrated_days: one night of baseline so far", 1L, skin.first().fields[3])
+        val typed = d.skinTemp.first()
+        assertEquals(1, typed.calibratedDays)
+        assertNull("no deviation until the watch has its baseline", typed.averageDeviation)
+        assertEquals(SyntheticFixtures.SLEEP_END - 7 * 3600, typed.localTimestamp)
         assertTrue(d.unknownMessageCount >= 1)
         printSummary("SKINTEMP_G9G80127.fit", d)
     }

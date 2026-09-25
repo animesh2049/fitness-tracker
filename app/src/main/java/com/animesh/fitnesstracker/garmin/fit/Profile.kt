@@ -75,6 +75,7 @@ internal object Mesg {
     const val SLEEP_RESTLESS_MOMENTS = 382
     const val DAILY_SLEEP = 384
     const val SKIN_TEMP_OVERNIGHT = 398
+    const val SKIN_TEMP_RAW = 397
     const val HILL_SCORE = 402
     const val ENDURANCE_SCORE = 403
     const val BODY_BATTERY_EVENT = 407
@@ -374,8 +375,14 @@ internal object Profile {
             f(14, "sleep_start_body_battery"), f(16, "sleep_end_body_battery"), f(22, "sleep_pressure"), f(24, "sleep_awake_duration"),
             ts(), idx()
         ),
-        // Only the local timestamp and a status flag have been seen so far; the deviation field waits for a watch with a baseline.
-        msg(Mesg.SKIN_TEMP_OVERNIGHT, "skin_temp_overnight", local(0), f(3, "status"), ts()),
+        // Skin temperature (Gadgetbridge names): deviations are float32 degrees from the user's baseline; a watch without a
+        // baseline writes only the local timestamp and calibrated_days.
+        msg(
+            Mesg.SKIN_TEMP_OVERNIGHT, "skin_temp_overnight",
+            local(0), f(1, "average_deviation", unit = C), f(2, "average_7_day_deviation", unit = C), f(3, "calibrated_days", unit = "d"),
+            f(4, "nightly_value", unit = C), ts()
+        ),
+        msg(Mesg.SKIN_TEMP_RAW, "skin_temp_raw", f(1, "deviation", unit = C), ts()),
         msg(
             Mesg.BODY_BATTERY_EVENT, "body_battery_event",
             f(0, "kind"), f(1, "duration", unit = MIN), f(2, "delta"), f(3, "unknown_3"), f(6, "unknown_6"), ts(7, "end_time"), ts()

@@ -370,10 +370,22 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
         return latestPerDay(rows)
     }
 
-    /** Days whose night row should pick up new sleep need or Body Battery values from these metrics. */
+    /**
+     * Overnight skin temperature as a daily metric: the average deviation from the baseline in degrees,
+     * with the calibrated day count as the extra, keyed by the local day of the record's wall clock
+     * (which is already local time, so its day is a plain division). Records without a deviation,
+     * which is every record until the watch has its baseline, produce nothing.
+     */
+    fun skinTemp(fit: DecodedFit): List<DailyMetric> = fit.skinTemp.mapNotNull { r ->
+        val deviation = r.averageDeviation ?: return@mapNotNull null
+        val day = r.localTimestamp?.let { Math.floorDiv(it, 86_400L) } ?: epochDay(r.timestamp)
+        DailyMetric(day, MetricType.SKIN_TEMP, deviation, r.calibratedDays?.toLong(), r.timestamp)
+    }.let(::latestPerDay)
+
+    /** Days whose night row should pick up new sleep need, Body Battery or skin temperature values from these metrics. */
     fun nightsTouchedByMetrics(metrics: List<DailyMetric>): Set<Long> = metrics.flatMapTo(LinkedHashSet()) { m ->
         when (m.type) {
-            MetricType.SLEEP_BODY_BATTERY -> listOf(m.epochDay)
+            MetricType.SLEEP_BODY_BATTERY, MetricType.SKIN_TEMP -> listOf(m.epochDay)
             // The need written on day D is for the night that ends on D + 1; D itself is the fallback the importer also checks.
             MetricType.SLEEP_NEED -> listOf(m.epochDay, m.epochDay + 1)
             else -> emptyList()

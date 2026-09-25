@@ -12,6 +12,7 @@ import com.animesh.fitnesstracker.garmin.fit.MaxMetRec
 import com.animesh.fitnesstracker.garmin.fit.MonitoringRec
 import com.animesh.fitnesstracker.garmin.fit.PhysiologicalMetricsRec
 import com.animesh.fitnesstracker.garmin.fit.SessionRec
+import com.animesh.fitnesstracker.garmin.fit.SkinTempRec
 import com.animesh.fitnesstracker.garmin.fit.SleepDemandRec
 import com.animesh.fitnesstracker.garmin.fit.SleepStageRec
 import com.animesh.fitnesstracker.garmin.fit.SleepStatsRec
@@ -163,6 +164,32 @@ class FitRowsV05Test {
         val bare = rows.activity(DecodedFit(fileId(4, start), sessions = listOf(SessionRec(start + 60, start, 10, 20, null, 60.0, 60.0, null, 5, null, 90, 100))), "b.fit")!!.activity
         assertNull(bare.performanceCondition)
         assertNull(bare.primaryBenefit)
+    }
+
+    @Test
+    fun skinTemperatureBecomesADailyMetricOnlyWithADeviation() {
+        val end = f.at("06:41")
+        val local = end + 5 * 3600 + 30 * 60 // Asia/Kolkata wall clock as a local timestamp
+        val fit = DecodedFit(
+            fileId(73, end + 10),
+            skinTemp = listOf(
+                SkinTempRec(end, local, -0.35, 0.1, 21, -0.5),
+                SkinTempRec(end + 60, local + 60, -0.3, 0.1, 21, -0.4),
+                SkinTempRec(end + 86_400, null, null, null, 22, null)
+            )
+        )
+        val m = rows.skinTemp(fit)
+        assertEquals(1, m.size)
+        val row = m.single()
+        assertEquals(MetricType.SKIN_TEMP, row.type)
+        assertEquals("the latest record of the day wins", -0.3, row.value, 0.0)
+        assertEquals(21L, row.extra)
+        assertEquals("day from the local timestamp", Math.floorDiv(local, 86_400L), row.epochDay)
+        assertEquals(f.WED_DAY, row.epochDay)
+        assertEquals(setOf(f.WED_DAY), rows.nightsTouchedByMetrics(m))
+        assertTrue(rows.skinTemp(DecodedFit(fileId(73), skinTemp = listOf(SkinTempRec(end, local, null, null, 1, null)))).isEmpty())
+        val byTimestamp = rows.skinTemp(DecodedFit(fileId(73), skinTemp = listOf(SkinTempRec(end, null, 0.2, null, 30, null)))).single()
+        assertEquals("without a wall clock the record's own timestamp names the day", f.WED_DAY, byTimestamp.epochDay)
     }
 
     @Test

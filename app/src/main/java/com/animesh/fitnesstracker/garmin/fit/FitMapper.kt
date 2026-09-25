@@ -71,6 +71,7 @@ private class TypedRecords {
     private val sleepDemand = ArrayList<SleepDemandRec>()
     private val bodyBatteryEvents = ArrayList<BodyBatteryEventRec>()
     private val altitude = ArrayList<MonitoringAltitudeRec>()
+    private val skinTemp = ArrayList<SkinTempRec>()
     private val hrvSummary = ArrayList<HrvSummaryRec>()
     private val hrvValues = ArrayList<HrvValueRec>()
     private val trainingLoad = ArrayList<TrainingLoadRec>()
@@ -147,6 +148,9 @@ private class TypedRecords {
                 )
             }
             Mesg.SLEEP_DEMAND -> f.long(253)?.let { sleepDemand += SleepDemandRec(it, f.int(0), f.int(1)) }
+            Mesg.SKIN_TEMP_OVERNIGHT -> (f.long(253) ?: f.long(0))?.let {
+                skinTemp += SkinTempRec(it, f.long(0), f.double(1), f.double(2), f.int(3), f.double(4))
+            }
             Mesg.MONITORING_HR_DATA -> restingHr += RestingHrRec(f.long(253), f.int(0), f.int(1))
             Mesg.TIME_IN_ZONE -> timeInZone += TimeInZoneRec(f.long(253), f.int(0), f.int(1), f.doubles(2), f.ints(6))
             Mesg.STRESS_LEVEL -> (f.long(1) ?: f.long(253))?.let { stress += StressRec(it, f.int(0), f.int(3), f.int(2)) }
@@ -284,7 +288,8 @@ private class TypedRecords {
         fileId = fileId ?: FileIdRec(typeNum = null, timeCreated = null),
         monitoring = monitoring, monitoringInfo = monitoringInfo, stress = stress, restingHr = restingHr, spo2 = spo2,
         respiration = respiration, events = events, sleepStages = sleepStages, sleepStats = sleepStats, restlessMoments = restlessMoments,
-        naps = naps, dailySleep = dailySleep, sleepDemand = sleepDemand, bodyBatteryEvents = bodyBatteryEvents, altitude = altitude, hrvSummary = hrvSummary, hrvValues = hrvValues, trainingLoad = trainingLoad, racePredictions = racePredictions,
+        naps = naps, dailySleep = dailySleep, sleepDemand = sleepDemand, bodyBatteryEvents = bodyBatteryEvents, altitude = altitude,
+        skinTemp = skinTemp, hrvSummary = hrvSummary, hrvValues = hrvValues, trainingLoad = trainingLoad, racePredictions = racePredictions,
         hillScores = hillScores, enduranceScores = enduranceScores, trainingReadiness = trainingReadiness,
         functionalMetrics = functionalMetrics, recovery = recovery, maxMet = maxMet, deviceStatus = deviceStatus, sessions = sessions,
         laps = laps, records = records, timeInZone = timeInZone, physiologicalMetrics = physiologicalMetrics, userProfile = userProfile,

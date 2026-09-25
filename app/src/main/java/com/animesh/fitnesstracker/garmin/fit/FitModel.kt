@@ -26,6 +26,7 @@ data class DecodedFit(
     val sleepDemand: List<SleepDemandRec> = emptyList(),
     val bodyBatteryEvents: List<BodyBatteryEventRec> = emptyList(),
     val altitude: List<MonitoringAltitudeRec> = emptyList(),
+    val skinTemp: List<SkinTempRec> = emptyList(),
     val hrvSummary: List<HrvSummaryRec> = emptyList(),
     val hrvValues: List<HrvValueRec> = emptyList(),
     val trainingLoad: List<TrainingLoadRec> = emptyList(),
@@ -118,6 +119,21 @@ data class BodyBatteryEventRec(
     val endTimestamp: Long?,
     val unknown3: Long? = null,
     val unknown6: Long? = null
+)
+
+/**
+ * Global message 398, the overnight skin temperature summary in the skin temperature file. Deviations
+ * are degrees Celsius from the user's own baseline; a watch still building that baseline writes only
+ * [localTimestamp] and [calibratedDays], so the deviations are null until then.
+ */
+data class SkinTempRec(
+    val timestamp: Long,
+    /** Wall clock of the record, converted like any local timestamp. */
+    val localTimestamp: Long?,
+    val averageDeviation: Double?,
+    val average7DayDeviation: Double?,
+    val calibratedDays: Int?,
+    val nightlyValue: Double?
 )
 
 /** Global message 227. [stress] is -1 or -2 when the watch could not measure; [bodyBattery] 0..100. */

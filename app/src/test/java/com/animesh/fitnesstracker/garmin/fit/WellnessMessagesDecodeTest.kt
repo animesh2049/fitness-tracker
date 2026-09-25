@@ -77,6 +77,35 @@ class WellnessMessagesDecodeTest {
     }
 
     @Test
+    fun skinTemperatureOvernightDecodesFloatDeviations() {
+        val w = FitWriter()
+        w.write(Mesg.FILE_ID, FitField.enum(0, 73), FitField.u32(4, t0 - GARMIN_EPOCH_UNIX_SECONDS))
+        w.write(
+            Mesg.SKIN_TEMP_OVERNIGHT,
+            ts(t0), FitField.u32(0, t0 - 7 * 3600 - GARMIN_EPOCH_UNIX_SECONDS), FitField.float32(1, -0.35f), FitField.float32(2, 0.12f),
+            FitField.u8(3, 21), FitField.float32(4, -0.5f)
+        )
+        w.write(Mesg.SKIN_TEMP_OVERNIGHT, ts(t0 + 60), FitField.u32(0, t0 + 60 - 7 * 3600 - GARMIN_EPOCH_UNIX_SECONDS), FitField.float32(1, null), FitField.float32(2, null), FitField.u8(3, 1), FitField.float32(4, null))
+        w.write(Mesg.SKIN_TEMP_RAW, ts(t0), FitField.float32(1, -0.4f))
+        val d = FitDecoder.decode(w.toByteArray())
+        assertEquals(2, d.skinTemp.size)
+        val full = d.skinTemp[0]
+        assertEquals(t0, full.timestamp)
+        assertEquals(t0 - 7 * 3600, full.localTimestamp)
+        assertEquals(-0.35, full.averageDeviation!!, 1e-6)
+        assertEquals(0.12, full.average7DayDeviation!!, 1e-6)
+        assertEquals(21, full.calibratedDays)
+        assertEquals(-0.5, full.nightlyValue!!, 1e-6)
+        val statusOnly = d.skinTemp[1]
+        assertNull(statusOnly.averageDeviation)
+        assertNull(statusOnly.average7DayDeviation)
+        assertNull(statusOnly.nightlyValue)
+        assertEquals(1, statusOnly.calibratedDays)
+        assertEquals("skin_temp_raw is named but stays raw", -0.4, (d.raw.first { it.globalMessageNumber == Mesg.SKIN_TEMP_RAW }.fields[1] as Double), 1e-6)
+        assertEquals(0, d.unknownFieldCount)
+    }
+
+    @Test
     fun monitoringAltitudeUsesTheEnhancedAltitudeScale() {
         val w = FitWriter()
         w.write(Mesg.FILE_ID, FitField.enum(0, 32), FitField.u32(4, t0 - GARMIN_EPOCH_UNIX_SECONDS))

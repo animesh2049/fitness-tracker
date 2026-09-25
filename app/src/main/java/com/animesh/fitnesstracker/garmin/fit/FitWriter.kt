@@ -20,6 +20,7 @@ internal class FitField private constructor(val num: Int, val baseType: FitBaseT
         fun u32(num: Int, value: Long?) = FitField(num, FitBaseType.UINT32, 4, value)
         /** uint32z: 0 is the invalid sentinel, so a null and a 0 encode identically. */
         fun u32z(num: Int, value: Long?) = FitField(num, FitBaseType.UINT32Z, 4, value)
+        fun float32(num: Int, value: Float?) = FitField(num, FitBaseType.FLOAT32, 4, value)
         fun sint8(num: Int, value: Int?) = FitField(num, FitBaseType.SINT8, 1, value?.toLong())
         fun sint16(num: Int, value: Int?) = FitField(num, FitBaseType.SINT16, 2, value?.toLong())
         fun sint32(num: Int, value: Long?) = FitField(num, FitBaseType.SINT32, 4, value)

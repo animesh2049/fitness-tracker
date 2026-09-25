@@ -24,6 +24,7 @@ import com.animesh.fitnesstracker.garmin.fit.MonitoringRec
 import com.animesh.fitnesstracker.garmin.fit.RespirationRec
 import com.animesh.fitnesstracker.garmin.fit.RestingHrRec
 import com.animesh.fitnesstracker.garmin.fit.SessionRec
+import com.animesh.fitnesstracker.garmin.fit.SkinTempRec
 import com.animesh.fitnesstracker.garmin.fit.SleepDemandRec
 import com.animesh.fitnesstracker.garmin.fit.SleepStageRec
 import com.animesh.fitnesstracker.garmin.fit.SleepStatsRec
@@ -335,6 +336,35 @@ class HealthDaoTest {
         importer.reimportAll()
         assertEquals(afterMonitor, health.observeSleepNight(wedDay).first())
         assertEquals(2, db.healthDao().countBodyBatteryEvents())
+    }
+
+    @Test
+    fun skinTemperatureReachesTheNightWhicheverFileComesFirst() = runTest {
+        val start = at(wed.minusDays(1), "23:41")
+        val end = at("06:53")
+        val sleep = DecodedFit(
+            FileIdRec(49, timeCreated = end), sleepStages = listOf(SleepStageRec(end, 2)), sleepStats = listOf(SleepStatsRec(end, 81)),
+            events = listOf(EventRec(start, 74, 0, null), EventRec(end, 74, 1, null))
+        )
+        val localEnd = end + zone.rules.getOffset(java.time.Instant.ofEpochSecond(end)).totalSeconds
+        val skin = DecodedFit(FileIdRec(73, timeCreated = end + 120), skinTemp = listOf(SkinTempRec(end + 120, localEnd + 120, -0.35, 0.1, 21, -0.5)))
+        val baselineOnly = DecodedFit(FileIdRec(73, timeCreated = end + 180), skinTemp = listOf(SkinTempRec(end + 180, localEnd + 180, null, null, 1, null)))
+
+        // Skin temperature before the sleep file.
+        importer.importFiles(listOf(stored("skin", skin, 1, 73, end + 120)))
+        assertNull(health.observeSleepNight(wedDay).first())
+        importer.importFiles(listOf(stored("sleep", sleep, 2, 49, end)))
+        val night = health.observeSleepNight(wedDay).first()!!
+        assertEquals(-0.35, night.skinTempDeviation!!, 1e-6)
+
+        // A record without a deviation neither overwrites nor clears it.
+        importer.importFiles(listOf(stored("baseline", baselineOnly, 3, 73, end + 180)))
+        assertEquals(-0.35, health.observeSleepNight(wedDay).first()!!.skinTempDeviation!!, 1e-6)
+
+        // The other order gives the same night.
+        importer.reimportAll()
+        assertEquals(-0.35, health.observeSleepNight(wedDay).first()!!.skinTempDeviation!!, 1e-6)
+        assertEquals(-0.35, health.observeLatestMetric(MetricType.SKIN_TEMP, wedDay).first()!!.value, 1e-6)
     }
 
     @Test
