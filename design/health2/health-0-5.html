@@ -1,0 +1,493 @@
+<title>Fitness Tracker Health 0.5</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+  :root {
+    --page-bg: #f3f4f0; --page-fg: #1a1c1e; --page-muted: #5d6268; --page-line: #d9dcd3; --page-card: #ffffff; --page-accent: #6f8a1f;
+    /* app tokens (the phone frames are always dark: that is the app) */
+    --bg: #0e0f11; --card: #17191c; --card2: #1f2226; --line: #24272c; --line2: #1f2226; --fg: #ecedee; --fg2: #b4b8bd; --muted: #8b9096; --muted2: #6b7076;
+    --lime: #c8f03c; --lime-ink: #101400; --lime-dim: #5d7a12; --lime-bg: #161b0d; --lime-line: #33421a; --coral: #ff6b5c; --amber: #f5b400; --olive: #6f8a1f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --page-bg: #121315; --page-fg: #e8e9ea; --page-muted: #9a9fa5; --page-line: #2a2d31; --page-card: #1a1c1f; --page-accent: #c8f03c; }
+  }
+  :root[data-theme="dark"] { --page-bg: #121315; --page-fg: #e8e9ea; --page-muted: #9a9fa5; --page-line: #2a2d31; --page-card: #1a1c1f; --page-accent: #c8f03c; }
+
+  body { background: var(--page-bg); color: var(--page-fg); font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; padding-inline: 16px; padding-block: 24px 48px; }
+  .mono { font-family: 'IBM Plex Mono', 'SF Mono', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 1760px; margin: 0 auto; }
+  header.intro { max-width: 720px; margin-bottom: 28px; }
+  header.intro .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--page-muted); margin-bottom: 8px; }
+  header.intro h1 { font-size: 30px; font-weight: 600; line-height: 1.1; margin: 0 0 12px; text-wrap: balance; }
+  header.intro p { font-size: 15px; line-height: 1.5; color: var(--page-muted); margin: 0 0 8px; }
+  .legend { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--page-muted); margin-top: 6px; }
+  .new { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; border-radius: 9px; background: var(--lime); color: var(--lime-ink); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; vertical-align: middle; }
+  .screens { display: flex; flex-wrap: wrap; gap: 40px 32px; align-items: flex-start; }
+  .screen { width: 390px; max-width: 100%; display: flex; flex-direction: column; gap: 12px; }
+  .cap { display: flex; flex-direction: column; gap: 6px; }
+  .cap h2 { font-size: 16px; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 8px; }
+  .cap p { font-size: 13px; line-height: 1.5; color: var(--page-muted); margin: 0; }
+  .cap ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: var(--page-muted); }
+  .frame { width: 390px; max-width: 100%; height: 844px; background: var(--bg); color: var(--fg); border-radius: 28px; border: 1px solid var(--page-line); box-shadow: 0 20px 50px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; position: relative; box-sizing: border-box; }
+  .frame.focus { outline: 2px solid var(--lime); outline-offset: 4px; }
+  .scroll { flex-grow: 1; overflow-y: auto; padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; }
+  .scroll::-webkit-scrollbar { display: none; }
+
+  /* app components, copied from the health canvas */
+  .hdr { padding: 28px 12px 8px 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-shrink: 0; }
+  .hdr.back { padding-left: 12px; align-items: flex-start; gap: 8px; justify-content: flex-start; }
+  .hdr .t { display: flex; flex-direction: column; gap: 4px; }
+  .hdr.back .t { padding-top: 6px; }
+  .eye { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+  .title { font-size: 30px; font-weight: 600; line-height: 1.1; }
+  .sub { font-size: 14px; color: var(--muted); }
+  .ibtn { width: 44px; height: 44px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); color: var(--fg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; font-family: inherit; }
+  .ibtn.plain { background: transparent; border: 0; }
+  .ibtn:disabled { color: #3a3e44; cursor: default; }
+  .ibtn:focus-visible, .card.tap:focus-visible, .pill:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+  .daynav { padding: 0 16px 8px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .daynav .lbl { flex-grow: 1; height: 44px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 500; }
+  .banner { background: var(--lime-bg); border: 1px solid var(--lime-line); border-radius: 12px; padding: 10px 10px 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .banner .n { font-size: 13px; font-weight: 600; }
+  .banner .s { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill { height: 36px; padding: 0 14px; border-radius: 18px; background: var(--lime); color: var(--lime-ink); border: 0; font-size: 13px; font-weight: 600; flex-shrink: 0; font-family: inherit; cursor: pointer; }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; position: relative; min-width: 0; }
+  .tile .l { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .tile .v { font-size: 20px; font-weight: 600; }
+  .tile .s { font-size: 11px; color: var(--muted2); }
+  .tile.hi { border-color: var(--lime-line); background: var(--lime-bg); }
+  .tag { position: absolute; top: 8px; right: 8px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 12px 10px; display: flex; flex-direction: column; gap: 6px; position: relative; }
+  .card.tap { cursor: pointer; text-align: left; color: inherit; font-family: inherit; width: 100%; }
+  .card .h { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px; }
+  .card .h .n { font-size: 13px; font-weight: 600; }
+  .card .h .r { font-size: 12px; color: var(--muted); }
+  .chart { position: relative; width: 334px; max-width: 100%; }
+  .chart svg { display: block; overflow: visible; width: 100%; height: auto; }
+  .ylab { position: absolute; left: 0; width: 28px; text-align: right; font-size: 10px; line-height: 12px; color: var(--muted); }
+  .xlab { position: absolute; transform: translateX(-50%); font-size: 10px; line-height: 12px; color: var(--muted2); }
+  .foot { display: flex; justify-content: space-between; padding: 8px 4px 0; border-top: 1px solid var(--line2); font-size: 12px; color: var(--muted); gap: 8px; }
+  .foot b { color: var(--fg); font-weight: 600; }
+  .foot.stack { flex-direction: column; gap: 6px; }
+  .kv { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .bandbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; }
+  .bandlbl { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+  .bandlbl div { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 4px; display: inline-block; }
+  .stagebar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; }
+  .scorepill { height: 24px; padding: 0 10px; border-radius: 12px; background: var(--lime); color: var(--lime-ink); font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; }
+  .sect { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; padding: 0 4px; }
+  .actrow { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 12px 12px 14px; display: flex; align-items: center; gap: 12px; min-height: 64px; box-sizing: border-box; }
+  .actrow .ico { width: 40px; height: 40px; border-radius: 10px; background: var(--card2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ghost { height: 44px; border-radius: 10px; background: transparent; border: 1px solid #2c3036; color: var(--fg2); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; flex: 1 1 0; }
+  .bar { height: 72px; border-top: 1px solid var(--line2); background: var(--bg); display: flex; align-items: stretch; flex-shrink: 0; }
+  .bar div { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted2); font-size: 11px; font-weight: 500; }
+  .bar div.on { color: var(--lime); font-weight: 600; }
+  .rows { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 6px 16px; display: flex; flex-direction: column; }
+  .row { display: flex; align-items: center; gap: 12px; height: 44px; border-bottom: 1px solid var(--line2); font-size: 13px; }
+  .row:last-child { border-bottom: 0; }
+  .row .nm { width: 96px; font-weight: 500; flex-shrink: 0; }
+  .row .trk { flex-grow: 1; height: 6px; border-radius: 3px; background: var(--card2); overflow: hidden; }
+  .row .trk i { display: block; height: 100%; background: var(--lime); }
+  .row .num { width: 34px; text-align: right; font-weight: 600; }
+  .row .wd { width: 60px; text-align: right; font-size: 11px; color: var(--muted); }
+  .ev { display: flex; align-items: center; gap: 12px; height: 60px; border-bottom: 1px solid var(--line2); }
+  .ev:last-child { border-bottom: 0; }
+  .ev .ico { width: 36px; height: 36px; border-radius: 10px; background: var(--card2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ev .m { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ev .m b { font-size: 14px; font-weight: 500; }
+  .ev .m span { font-size: 12px; color: var(--muted); }
+  .ev .d { font-size: 18px; font-weight: 600; flex-shrink: 0; }
+  .up { color: var(--lime); } .down { color: var(--coral); }
+  .zone { display: flex; align-items: center; gap: 10px; height: 26px; }
+  .zone .trk { flex-grow: 1; height: 10px; border-radius: 5px; background: var(--card2); overflow: hidden; }
+  .zone .trk i { display: block; height: 100%; }
+  .note { font-size: 12px; color: var(--muted2); padding: 0 4px; line-height: 1.45; }
+  .linkcard { background: var(--lime-bg); border: 1px solid var(--lime-line); border-radius: 12px; padding: 12px 12px 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .toast { position: absolute; left: 16px; right: 16px; bottom: 84px; background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 13px; color: var(--fg2); box-shadow: 0 8px 24px rgba(0,0,0,0.4); opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+  @media (max-width: 440px) { .frame { border-radius: 20px; } .screens { gap: 32px; } }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <div class="eyebrow">Fitness Tracker · Health tab · version 0.5</div>
+    <h1>More from the watch, on the screens you already have</h1>
+    <p>Four screens, all read from the Forerunner 570's files the app already downloads. Nothing here needs Garmin Connect. Three of the four are existing screens with new cards; Body Battery day is new.</p>
+    <p class="legend"><span class="new">New</span> marks what version 0.5 adds. The frames scroll. Day arrows, the Body Battery card and the Sleep card respond to taps.</p>
+  </header>
+
+  <div class="screens">
+
+    <!-- 1. Health today -->
+    <section class="screen">
+      <div class="cap">
+        <h2>Health today</h2>
+        <ul>
+          <li>Top grid grows to four tiles: Floors joins Steps and Distance, and Active becomes Calories with the total on top and active plus resting underneath.</li>
+          <li>Body Battery gains a charged and drained line and opens the new day screen.</li>
+          <li>The Sleep card shows the Sleep Coach need and how far short the night fell.</li>
+        </ul>
+      </div>
+      <div class="frame" id="f-today">
+        <div class="hdr">
+          <div class="t"><div class="eye" id="td-eye">Health · Wed 16 Sep</div><div class="title" id="td-title">Today</div><div class="sub" id="td-sub">Upper A done at 08:03</div></div>
+          <button class="ibtn" aria-label="Watch settings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"></rect><path d="M9 6V3h6v3M9 18v3h6v-3M12 10v2l1.5 1.5"></path></svg></button>
+        </div>
+        <div class="daynav">
+          <button class="ibtn" id="td-prev" aria-label="Previous day"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          <div class="lbl"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b9096" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M3 9h18M8 3v3M16 3v3"></path></svg><span id="td-day">Wednesday 16 Sep</span></div>
+          <button class="ibtn" id="td-next" aria-label="Next day" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+        </div>
+        <div class="scroll">
+          <div class="banner">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8f03c" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="3"></rect><path d="M9 6V3h6v3M9 18v3h6v-3"></path></svg>
+              <div style="min-width:0;"><div class="n">Forerunner 570 · 71%</div><div class="s">Synced 12 min ago · 59 files</div></div>
+            </div>
+            <button class="pill">Sync now</button>
+          </div>
+          <div class="grid2">
+            <div class="tile"><div class="l">Steps</div><div class="v mono" id="td-steps">8,412</div><div class="s" id="td-stepsSub">84% of 10,000</div></div>
+            <div class="tile hi"><span class="new tag">New</span><div class="l">Floors</div><div class="v mono" id="td-floors">4</div><div class="s" id="td-floorsSub">12.4 m up · 2 floors down</div></div>
+            <div class="tile"><div class="l">Distance</div><div class="v mono" id="td-dist">6.4 km</div><div class="s">walking</div></div>
+            <div class="tile hi"><span class="new tag">New</span><div class="l">Calories</div><div class="v mono" id="td-kcal">2,105</div><div class="s" id="td-kcalSub">active 412 · resting 1,693 so far</div></div>
+          </div>
+
+          <div class="card">
+            <div class="h"><div class="n">Heart rate</div><div class="r mono" id="td-hrRange">49 to 158 bpm</div></div>
+            <div class="chart" id="td-hr"></div>
+            <div class="foot">
+              <div style="display:flex;flex-direction:column;gap:2px;"><span>Resting</span><b class="mono" style="font-size:15px;" id="td-hrRest">54</b></div>
+              <div style="display:flex;flex-direction:column;gap:2px;"><span>Average</span><b class="mono" style="font-size:15px;" id="td-hrAvg">71</b></div>
+              <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span>Max · <span id="td-hrMaxAt">07:41</span></span><b class="mono" style="font-size:15px;" id="td-hrMax">158</b></div>
+            </div>
+          </div>
+
+          <button class="card tap" id="td-bbcard" aria-label="Open Body Battery day">
+            <div class="h"><div class="n">Body Battery <span class="new" style="margin-left:6px;">New</span></div><div class="r mono" id="td-bbNow">47 now</div></div>
+            <div class="chart" id="td-bb"></div>
+            <div class="foot stack">
+              <div class="kv"><span>High <b class="mono" id="td-bbHigh">88 · 06:10</b></span><span>Low <b class="mono" id="td-bbLow">45 · 20:00</b></span></div>
+              <div class="kv">
+                <span><span class="up mono" style="font-weight:600;" id="td-bbUp">+51</span> charged · <span class="down mono" style="font-weight:600;" id="td-bbDown">−34</span> drained · overnight <b class="mono" id="td-bbNight">37 → 88</b></span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b7076" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+              </div>
+            </div>
+          </button>
+
+          <div class="card" style="padding:14px 16px;gap:10px;">
+            <div class="h" style="padding:0;"><div class="n">Stress</div><div class="r">average <b class="mono" style="color:var(--fg);" id="td-stress">31</b></div></div>
+            <div class="bandbar" id="td-bands"></div>
+            <div class="bandlbl" id="td-bandlbl"></div>
+          </div>
+
+          <button class="card tap" id="td-sleepcard" style="padding:14px 12px 14px 16px;flex-direction:row;align-items:center;gap:12px;" aria-label="Open Sleep night">
+            <div style="display:flex;flex-direction:column;gap:8px;flex-grow:1;min-width:0;">
+              <div class="h" style="padding:0;"><div class="n">Sleep</div><div class="r" id="td-sleepWin">Tue 23:41 to Wed 06:53</div></div>
+              <div style="display:flex;align-items:baseline;gap:10px;"><div class="mono" style="font-size:24px;font-weight:600;" id="td-sleepDur">7 h 12 m</div><span class="scorepill" id="td-sleepScore">Score 81</span></div>
+              <div class="stagebar" id="td-stages"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);">
+                <span>Need <b class="mono" style="color:var(--fg);" id="td-need">8 h 40 m</b> · <span id="td-needGap" style="color:var(--amber);">short by 1 h 28 m</span></span><span class="new">New</span>
+              </div>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6b7076" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9 6l6 6-6 6"></path></svg>
+          </button>
+
+          <div class="grid2">
+            <div class="tile"><div class="l">HRV overnight</div><div class="v mono" id="td-hrv">58 ms</div><div class="s" id="td-hrvSub">Balanced · baseline 52 to 66</div></div>
+            <div class="tile"><div class="l">Intensity minutes</div><div class="v mono" id="td-int">94 / 150</div><div class="s">this week, target 150</div></div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="sect">Activities</div>
+            <div id="td-acts"></div>
+          </div>
+          <div style="display:flex;gap:8px;padding-top:2px;"><button class="ghost">Trends</button><button class="ghost">All activities</button></div>
+        </div>
+        <div class="bar">
+          <div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M3 8v8M21 8v8M6 12h12"></path></svg>Workout</div>
+          <div><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16a8 8 0 0 1-16 0z"></path><path d="M9 3v4M12 2v5M15 3v4"></path></svg>Diet</div>
+          <div class="on"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 8-6-16-3 8H2"></path></svg>Health</div>
+        </div>
+        <div class="toast" id="td-toast">Opens the screen to the right</div>
+      </div>
+    </section>
+
+    <!-- 2. Body Battery day -->
+    <section class="screen">
+      <div class="cap">
+        <h2>Body Battery day <span class="new">New screen</span></h2>
+        <ul>
+          <li>The day's curve, then what charged and what drained it, read from the watch's own event records.</li>
+          <li>Labels such as Sleep and Workout ship only after the event kinds are confirmed against the watch (Q17). Until then the rows say Charged or Drained with the time span.</li>
+          <li>Overnight repeats the start and end values the sleep file carries.</li>
+        </ul>
+      </div>
+      <div class="frame" id="f-bb">
+        <div class="hdr back">
+          <button class="ibtn plain" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          <div class="t"><div class="eye">Body Battery · Wed 16 Sep</div><div class="title">47 now</div><div class="sub">High 88 at 06:10 · Low 45 at 20:00</div></div>
+        </div>
+        <div class="scroll" style="padding-top:8px;">
+          <div class="card">
+            <div class="h"><div class="n">Today</div><div class="r mono">medium reserve</div></div>
+            <div class="chart" id="bb-chart"></div>
+          </div>
+          <div class="grid2">
+            <div class="tile"><div class="l">Charged</div><div class="v mono up">+51</div><div class="s">sleep and rest</div></div>
+            <div class="tile"><div class="l">Drained</div><div class="v mono down">−34</div><div class="s">workout, stress and the day</div></div>
+          </div>
+          <div class="rows" style="padding:4px 14px;">
+            <div class="ev">
+              <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8f03c" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 13A8 8 0 1 1 11 3a6 6 0 0 0 10 10z"></path></svg></div>
+              <div class="m"><b>Sleep</b><span>23:41 to 06:53 · 7 h 12 m</span></div>
+              <div class="d mono up">+51</div>
+            </div>
+            <div class="ev">
+              <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff6b5c" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M3 8v8M21 8v8M6 12h12"></path></svg></div>
+              <div class="m"><b>Workout · Upper A</b><span>07:05 to 08:03 · 58 min</span></div>
+              <div class="d mono down">−10</div>
+            </div>
+            <div class="ev">
+              <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5b400" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 8-6-16-3 8H2"></path></svg></div>
+              <div class="m"><b>Day</b><span>08:03 to 20:00 · stress avg 34</span></div>
+              <div class="d mono down">−21</div>
+            </div>
+            <div class="ev">
+              <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b4b8bd" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></div>
+              <div class="m"><b>Drained</b><span>20:00 to now · 41 min</span></div>
+              <div class="d mono down">−3</div>
+            </div>
+          </div>
+          <div class="card" style="padding:14px 16px;gap:10px;">
+            <div class="h" style="padding:0;"><div class="n">Overnight</div><div class="r">from the sleep file</div></div>
+            <div class="grid3" style="gap:6px;">
+              <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Start</div><div class="mono" style="font-size:20px;font-weight:600;">37</div></div>
+              <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">End</div><div class="mono" style="font-size:20px;font-weight:600;">88</div></div>
+              <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Gain</div><div class="mono up" style="font-size:20px;font-weight:600;">+51</div></div>
+            </div>
+          </div>
+          <div class="card" style="padding:14px 16px;">
+            <div class="n" style="font-size:13px;font-weight:600;">From the watch</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.45;">Body Battery and its events are computed on the Forerunner. The app reads them from the monitoring file and does not rescore anything.</div>
+          </div>
+          <button class="ghost" style="flex:none;">Body Battery trends</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Sleep night -->
+    <section class="screen">
+      <div class="cap">
+        <h2>Sleep night</h2>
+        <ul>
+          <li>Score breakdown: the ten sub-scores the watch already writes, each with Garmin's word band.</li>
+          <li>Sleep need from the watch's Sleep Coach, compared with the night.</li>
+          <li>Body Battery joins the stats grid. Skin temperature appears here once the watch has a baseline.</li>
+        </ul>
+      </div>
+      <div class="frame" id="f-sleep">
+        <div class="hdr back">
+          <button class="ibtn plain" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          <div class="t"><div class="eye">Sleep · night to Wed 16 Sep</div><div class="title">7 h 12 m</div><div class="sub">23:41 to 06:53 · fell asleep in 9 min</div></div>
+        </div>
+        <div class="daynav">
+          <button class="ibtn" aria-label="Previous night"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          <div class="lbl">Tue 15 to Wed 16 Sep</div>
+          <button class="ibtn" aria-label="Next night" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg></button>
+        </div>
+        <div class="scroll">
+          <div class="card">
+            <div class="h"><div class="n">Stages</div><span class="scorepill" style="height:22px;">Score 81 · Good</span></div>
+            <div class="chart" id="sl-hypno"></div>
+          </div>
+          <div class="rows" id="sl-stagerows"></div>
+
+          <div class="card" style="padding:14px 16px 6px;gap:4px;">
+            <div class="h" style="padding:0 0 6px;"><div class="n">Score breakdown <span class="new" style="margin-left:6px;">New</span></div><div class="r">what made 81</div></div>
+            <div id="sl-breakdown"></div>
+          </div>
+
+          <div class="card" style="padding:14px 16px;gap:10px;">
+            <div class="h" style="padding:0;"><div class="n">Sleep need <span class="new" style="margin-left:6px;">New</span></div><div class="r">Sleep Coach</div></div>
+            <div class="grid3" style="gap:6px;">
+              <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Need</div><div class="mono" style="font-size:20px;font-weight:600;">8 h 40 m</div></div>
+              <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Slept</div><div class="mono" style="font-size:20px;font-weight:600;">7 h 12 m</div></div>
+              <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Short by</div><div class="mono" style="font-size:20px;font-weight:600;color:var(--amber);">1 h 28 m</div></div>
+            </div>
+            <div style="height:6px;border-radius:3px;background:var(--card2);overflow:hidden;position:relative;"><i style="display:block;height:100%;width:83%;background:var(--lime);"></i><i style="position:absolute;top:-3px;left:calc(100% - 2px);width:2px;height:12px;background:var(--fg);"></i></div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.45;">Your usual need is 8 h. The watch raised it after yesterday's training and a low HRV night.</div>
+          </div>
+
+          <div class="grid3" id="sl-stats"></div>
+
+          <div class="card" style="padding:14px 16px;">
+            <div style="font-size:13px;font-weight:600;">From the watch</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.45;">Stages, scores, need and HRV status are computed on the Forerunner and read from its sleep, metrics and HRV files. The app does not re-score sleep.</div>
+          </div>
+          <button class="ghost" style="flex:none;">Sleep trends</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Activity detail -->
+    <section class="screen">
+      <div class="cap">
+        <h2>Activity detail</h2>
+        <ul>
+          <li>Two tiles join the training effect group: Performance condition and Benefit, both from the activity file's physiological metrics.</li>
+          <li>Both hide when the watch leaves them empty, which strength sessions often do. The benefit label mapping is confirmed on the watch first (Q18).</li>
+        </ul>
+      </div>
+      <div class="frame" id="f-act">
+        <div class="hdr back">
+          <button class="ibtn plain" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+          <div class="t"><div class="eye">Activity · Mon 14 Sep</div><div class="title">Walk</div><div class="sub">18:02 · 1 h 04 m · 6.1 km</div></div>
+        </div>
+        <div class="scroll" style="padding-top:8px;">
+          <div class="grid3">
+            <div class="tile"><div class="l">Duration</div><div class="v mono">1:04:12</div><div class="s">moving 1:01:40</div></div>
+            <div class="tile"><div class="l">Calories</div><div class="v mono">312</div><div class="s">kcal</div></div>
+            <div class="tile"><div class="l">Avg HR</div><div class="v mono">96</div><div class="s">max 121</div></div>
+          </div>
+          <div class="card" style="gap:8px;">
+            <div class="h"><div class="n">Route</div><div class="r mono">6.1 km · 38 m ascent</div></div>
+            <svg width="334" height="136" viewBox="0 0 334 136" style="display:block;background:#121417;border-radius:8px;max-width:100%;height:auto;"><polyline points="30,120 52,104 70,92 96,88 118,74 140,58 166,50 190,44 214,52 236,64 250,84 262,104 280,112 300,98 312,80 306,60 290,44 270,36 244,28 218,30 196,38 172,56 150,72 128,90 104,102 80,112 56,120 30,120" fill="none" stroke="#c8f03c" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></polyline><circle cx="30" cy="120" r="5" fill="#ecedee" stroke="#121417" stroke-width="2"></circle></svg>
+            <div class="note">Track only, no map tiles offline</div>
+          </div>
+          <div class="card">
+            <div class="h"><div class="n">Heart rate</div><div class="r mono">78 to 121 bpm · minutes</div></div>
+            <div class="chart" id="ac-hr"></div>
+          </div>
+          <div class="card" style="padding:14px 16px;gap:8px;">
+            <div class="n" style="font-size:13px;font-weight:600;">Time in zones</div>
+            <div id="ac-zones"></div>
+          </div>
+          <div class="grid2">
+            <div class="tile"><div class="l">Aerobic effect</div><div class="v mono">1.8</div><div class="s">Minor benefit</div></div>
+            <div class="tile"><div class="l">Anaerobic effect</div><div class="v mono">0.0</div><div class="s">No benefit</div></div>
+            <div class="tile hi"><span class="new tag">New</span><div class="l">Performance</div><div class="v mono">−2</div><div class="s">condition vs your baseline</div></div>
+            <div class="tile hi"><span class="new tag">New</span><div class="l">Benefit</div><div class="v" style="font-size:18px;">Recovery</div><div class="s">the watch's label</div></div>
+            <div class="tile"><div class="l">Recovery</div><div class="v mono">6 h</div><div class="s">until Tue 00:10</div></div>
+            <div class="tile"><div class="l">Load</div><div class="v mono">21</div><div class="s">acute 214 this week</div></div>
+          </div>
+          <div class="note">Recorded on Forerunner 570 · firmware 6.18 · file ACTIVITY_2026-09-14_18-02-11_1288.fit</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  var P = { l: 34, r: 326 };
+  function yOf(v, min, max, top, bottom) { return bottom - ((v - min) / (max - min)) * (bottom - top); }
+  function pts(vals, min, max, top, bottom) {
+    var step = (P.r - P.l) / (vals.length - 1);
+    return vals.map(function (v, i) { return (P.l + i * step).toFixed(1) + ',' + yOf(v, min, max, top, bottom).toFixed(1); });
+  }
+  function lineChart(el, vals, min, max, h, grid, color, area, xl, refY) {
+    var top = 10, bottom = h - 26;
+    var p = pts(vals, min, max, top, bottom);
+    var s = '<svg width="334" height="' + h + '" viewBox="0 0 334 ' + h + '">';
+    grid.forEach(function (g) { s += '<line x1="34" x2="326" y1="' + yOf(g, min, max, top, bottom).toFixed(1) + '" y2="' + yOf(g, min, max, top, bottom).toFixed(1) + '" stroke="#24272c" stroke-width="1"></line>'; });
+    if (refY != null) s += '<line x1="34" x2="326" y1="' + yOf(refY, min, max, top, bottom).toFixed(1) + '" y2="' + yOf(refY, min, max, top, bottom).toFixed(1) + '" stroke="#8b9096" stroke-width="1" stroke-dasharray="3 4"></line>';
+    if (area) { var f = p[0].split(','), l = p[p.length - 1].split(','); s += '<path d="M' + f[0] + ',' + bottom + ' L' + p.join(' L') + ' L' + l[0] + ',' + bottom + ' Z" fill="rgba(200,240,60,0.14)" stroke="none"></path>'; }
+    s += '<polyline points="' + p.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline></svg>';
+    grid.forEach(function (g) { s += '<div class="ylab mono" style="top:' + (Math.round(yOf(g, min, max, top, bottom)) - 6) + 'px;">' + g + '</div>'; });
+    xl.forEach(function (t, i) { var x = Math.round(P.l + i * (P.r - P.l) / (xl.length - 1)); s += '<div class="xlab" style="top:' + (h - 12) + 'px;left:' + (x / 334 * 100) + '%;">' + t + '</div>'; });
+    el.innerHTML = s;
+  }
+  function mins(m) { var h = Math.floor(m / 60), r = m % 60; return h ? h + ' h ' + (r < 10 ? '0' + r : r) + ' m' : r + ' m'; }
+  var HOURS = ['00', '06', '12', '18', '24'];
+  var BAND_NAMES = ['Rest', 'Low', 'Medium', 'High'], BAND_COLORS = ['#c8f03c', '#6f8a1f', '#f5b400', '#ff6b5c'];
+  var STAGE_NAMES = ['Deep', 'Light', 'REM', 'Awake'], STAGE_COLORS = ['#c8f03c', '#5d7a12', '#b4b8bd', '#ff6b5c'];
+  var ICON_STRENGTH = 'M6 5v14M18 5v14M3 8v8M21 8v8M6 12h12', ICON_WALK = 'M13 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM9.5 22l2-7 2.5 2.5V22M7 13l2-5 3-1 3 3 3 1M8 22l1.5-5';
+
+  var DAYS = [
+    { eye: 'Health · Mon 14 Sep', title: 'Monday', sub: 'Rest day · evening walk', day: 'Monday 14 Sep', steps: '12,904', stepsSub: '129% of 10,000', floors: '9', floorsSub: '27.6 m up · 8 floors down', dist: '9.8 km', kcal: '2,181', kcalSub: 'active 488 · resting 1,693',
+      hr: [54,53,52,51,50,49,49,51,52,53,56,60,63,66,70,72,74,76,78,80,78,76,74,72,74,76,78,80,82,84,86,88,92,100,110,118,121,115,104,92,80,72,68,64,62,60,58,56], hrRest: 53, hrAvg: 66, hrMax: 121, hrMaxAt: '18:12',
+      bb: [82,84,86,88,90,91,91,90,88,85,82,79,76,73,70,67,64,58,50,44,40,38,36,35], bbNow: '35 at bedtime', bbHigh: '91 · 06:10', bbLow: '35 · 23:30', bbUp: '+56', bbDown: '−56', bbNight: '35 → 91',
+      stress: 24, bands: [61, 28, 10, 1], sleepWin: 'Sun 23:12 to Mon 06:57', sleepDur: '7 h 45 m', score: 86, stages: [96, 252, 104, 13], need: '8 h 00 m', gap: 'need met', gapOk: true,
+      hrv: '61 ms', hrvSub: 'Balanced · baseline 52 to 66', intensity: '40 / 150',
+      acts: [{ icon: ICON_WALK, name: 'Walk', meta: '18:02 · 6.1 km · avg 96 bpm', dur: '1 h 04 m', sub: '312 kcal' }] },
+    { eye: 'Health · Tue 15 Sep', title: 'Tuesday', sub: 'Desk day', day: 'Tuesday 15 Sep', steps: '5,120', stepsSub: '51% of 10,000', floors: '2', floorsSub: '6.1 m up · 2 floors down', dist: '3.9 km', kcal: '1,924', kcalSub: 'active 231 · resting 1,693',
+      hr: [55,54,53,52,51,50,51,53,52,54,57,60,64,68,72,76,80,84,82,78,76,74,72,75,78,82,86,90,88,84,80,78,76,74,72,70,72,74,76,72,68,66,64,62,60,58,57,56], hrRest: 55, hrAvg: 69, hrMax: 90, hrMaxAt: '13:30',
+      bb: [78,80,82,84,86,87,88,87,85,82,79,76,73,70,67,64,61,58,55,52,49,46,43,41], bbNow: '41 at bedtime', bbHigh: '88 · 06:30', bbLow: '41 · 23:40', bbUp: '+53', bbDown: '−47', bbNight: '35 → 88',
+      stress: 33, bands: [48, 34, 15, 3], sleepWin: 'Mon 23:58 to Tue 06:36', sleepDur: '6 h 38 m', score: 72, stages: [62, 232, 78, 26], need: '8 h 10 m', gap: 'short by 1 h 32 m', gapOk: false,
+      hrv: '49 ms', hrvSub: 'Low · baseline 52 to 66', intensity: '62 / 150', acts: [] },
+    { eye: 'Health · Wed 16 Sep', title: 'Today', sub: 'Upper A done at 08:03', day: 'Wednesday 16 Sep', steps: '8,412', stepsSub: '84% of 10,000', floors: '4', floorsSub: '12.4 m up · 2 floors down', dist: '6.4 km', kcal: '2,105', kcalSub: 'active 412 · resting 1,693 so far',
+      hr: [56,54,52,51,50,49,50,52,51,53,55,58,62,70,95,132,150,158,140,110,88,78,74,72,76,80,84,79,75,72,74,78,82,76,73,70,72,75,71,68,66,64,63], hrRest: 54, hrAvg: 71, hrMax: 158, hrMaxAt: '07:41',
+      bb: [84,85,86,87,88,88,88,85,71,67,65,63,61,60,58,56,54,52,50,47,45,47], bbNow: '47 now', bbHigh: '88 · 06:10', bbLow: '45 · 20:00', bbUp: '+51', bbDown: '−34', bbNight: '37 → 88',
+      stress: 31, bands: [52, 31, 14, 3], sleepWin: 'Tue 23:41 to Wed 06:53', sleepDur: '7 h 12 m', score: 81, stages: [85, 238, 90, 19], need: '8 h 40 m', gap: 'short by 1 h 28 m', gapOk: false,
+      hrv: '58 ms', hrvSub: 'Balanced · baseline 52 to 66', intensity: '94 / 150',
+      acts: [{ icon: ICON_STRENGTH, name: 'Upper A · Strength', meta: '07:05 · avg 118 bpm · linked to your session', dur: '58 min', sub: '386 kcal' }] }
+  ];
+  var day = 2;
+  function $(id) { return document.getElementById(id); }
+  function renderToday() {
+    var d = DAYS[day];
+    ['eye', 'title', 'sub', 'day', 'steps', 'stepsSub', 'floors', 'floorsSub', 'dist', 'kcal', 'kcalSub', 'hrRest', 'hrAvg', 'hrMax', 'hrMaxAt', 'bbNow', 'bbHigh', 'bbLow', 'bbUp', 'bbDown', 'bbNight', 'stress', 'sleepWin', 'sleepDur', 'need', 'hrv', 'hrvSub'].forEach(function (k) { var el = $('td-' + k); if (el) el.textContent = d[k]; });
+    $('td-int').textContent = d.intensity;
+    $('td-hrRange').textContent = Math.min.apply(null, d.hr) + ' to ' + Math.max.apply(null, d.hr) + ' bpm';
+    $('td-sleepScore').textContent = 'Score ' + d.score;
+    var gap = $('td-needGap'); gap.textContent = d.gap; gap.style.color = d.gapOk ? '#c8f03c' : '#f5b400';
+    lineChart($('td-hr'), d.hr, 40, 160, 122, [60, 100, 140], '#ff6b5c', false, HOURS, d.hrRest);
+    lineChart($('td-bb'), d.bb, 0, 100, 102, [25, 50, 75], '#c8f03c', true, HOURS, null);
+    var total = d.bands.reduce(function (a, b) { return a + b; }, 0);
+    $('td-bands').innerHTML = d.bands.map(function (v, i) { return '<div style="flex:0 0 ' + (v / total * 100) + '%;background:' + BAND_COLORS[i] + ';"></div>'; }).join('');
+    $('td-bandlbl').innerHTML = d.bands.map(function (v, i) { return '<div><span class="dot" style="background:' + BAND_COLORS[i] + ';"></span>' + BAND_NAMES[i] + ' <span class="mono" style="color:#b4b8bd;">' + (v / total * 16.5).toFixed(1) + ' h</span></div>'; }).join('');
+    var st = d.stages.reduce(function (a, b) { return a + b; }, 0);
+    $('td-stages').innerHTML = d.stages.map(function (v, i) { return '<div style="flex:0 0 ' + (v / st * 100) + '%;background:' + STAGE_COLORS[i] + ';"></div>'; }).join('');
+    $('td-acts').innerHTML = d.acts.length ? d.acts.map(function (a) {
+      return '<div class="actrow"><div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c8f03c" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="' + a.icon + '"></path></svg></div><div style="display:flex;flex-direction:column;gap:2px;flex-grow:1;min-width:0;"><div style="font-size:14px;font-weight:500;">' + a.name + '</div><div style="font-size:12px;color:#8b9096;">' + a.meta + '</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;"><div class="mono" style="font-size:15px;font-weight:600;">' + a.dur + '</div><div style="font-size:11px;color:#6b7076;">' + a.sub + '</div></div></div>';
+    }).join('') : '<div style="border:1px dashed #2c3036;border-radius:12px;padding:14px 16px;font-size:13px;color:#6b7076;text-align:center;">No activity recorded on the watch</div>';
+    $('td-prev').disabled = day === 0; $('td-next').disabled = day === DAYS.length - 1;
+  }
+  $('td-prev').addEventListener('click', function () { if (day > 0) { day--; renderToday(); } });
+  $('td-next').addEventListener('click', function () { if (day < DAYS.length - 1) { day++; renderToday(); } });
+  renderToday();
+
+  var toastTimer;
+  function focusFrame(id, msg) {
+    ['f-bb', 'f-sleep'].forEach(function (f) { $(f).classList.remove('focus'); });
+    var f = $(id); f.classList.add('focus'); f.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    var t = $('td-toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); f.classList.remove('focus'); }, 1800);
+  }
+  $('td-bbcard').addEventListener('click', function () { focusFrame('f-bb', 'Opens Body Battery day'); });
+  $('td-sleepcard').addEventListener('click', function () { focusFrame('f-sleep', 'Opens Sleep night'); });
+
+  // Body Battery day chart
+  lineChart($('bb-chart'), DAYS[2].bb, 0, 100, 140, [25, 50, 75], '#c8f03c', true, HOURS, null);
+
+  // Sleep: hypnogram (stage codes 0 awake, 1 REM, 2 light, 3 deep)
+  var seg = [[0,4],[2,22],[3,38],[2,36],[1,20],[2,30],[3,27],[0,5],[2,42],[1,28],[2,40],[3,20],[2,38],[1,42],[0,10],[2,30]];
+  var LANES = ['Awake', 'REM', 'Light', 'Deep'], LANE_COLORS = ['#ff6b5c', '#b4b8bd', '#5d7a12', '#c8f03c'];
+  (function () {
+    var X0 = 52, X1 = 330, TOP = 12, GAP = 30, total = seg.reduce(function (a, s) { return a + s[1]; }, 0), scale = (X1 - X0) / total, x = X0;
+    var s = '<svg width="334" height="152" viewBox="0 0 334 152">';
+    LANES.forEach(function (n, i) { s += '<line x1="52" x2="330" y1="' + (TOP + i * GAP) + '" y2="' + (TOP + i * GAP) + '" stroke="#24272c" stroke-width="1"></line>'; });
+    seg.forEach(function (sg) { s += '<rect x="' + x.toFixed(1) + '" y="' + (TOP + sg[0] * GAP - 9) + '" width="' + Math.max(2, sg[1] * scale - 1).toFixed(1) + '" height="18" rx="3" fill="' + LANE_COLORS[sg[0]] + '"></rect>'; x += sg[1] * scale; });
+    s += '</svg>';
+    LANES.forEach(function (n, i) { s += '<div class="ylab" style="width:46px;top:' + (TOP + i * GAP - 6) + 'px;">' + n + '</div>'; });
+    for (var h = 0; h * 60 <= total; h += 2) { var xx = X0 + h * 60 * scale; s += '<div class="xlab mono" style="top:136px;left:' + (xx / 334 * 100) + '%;">+' + h + 'h</div>'; }
+    $('sl-hypno').innerHTML = s;
+    var per = [0, 0, 0, 0]; seg.forEach(function (sg) { per[sg[0]] += sg[1]; });
+    $('sl-stagerows').innerHTML = [3, 2, 1, 0].map(function (i) { return '<div class="row" style="height:48px;"><span class="dot" style="width:10px;height:10px;border-radius:5px;background:' + LANE_COLORS[i] + ';"></span><div class="nm" style="width:48px;font-size:14px;">' + LANES[i] + '</div><div class="trk"><i style="background:' + LANE_COLORS[i] + ';width:' + (per[i] / total * 100) + '%;"></i></div><div class="mono" style="width:78px;text-align:right;font-size:14px;font-weight:600;white-space:nowrap;">' + mins(per[i]) + '</div><div class="mono" style="width:32px;text-align:right;font-size:12px;color:#8b9096;">' + Math.round(per[i] / total * 100) + '%</div></div>'; }).join('');
+  })();
+  function band(v) { return v >= 90 ? 'Excellent' : v >= 80 ? 'Good' : v >= 60 ? 'Fair' : 'Poor'; }
+  var BREAK = [['Recovery', 100], ['Duration', 89], ['REM', 86], ['Quality', 84], ['Light', 78], ['Deep', 74], ['Awakenings', 74, '2 times'], ['Interruptions', 72], ['Restlessness', 71, '12 moments'], ['Awake time', 70, '19 m']];
+  $('sl-breakdown').innerHTML = BREAK.map(function (b) { return '<div class="row"><div class="nm">' + b[0] + (b[2] ? '<div style="font-size:11px;color:#6b7076;font-weight:400;">' + b[2] + '</div>' : '') + '</div><div class="trk"><i style="width:' + b[1] + '%;background:' + (b[1] >= 80 ? '#c8f03c' : b[1] >= 60 ? '#6f8a1f' : '#f5b400') + ';"></i></div><div class="num mono">' + b[1] + '</div><div class="wd">' + band(b[1]) + '</div></div>'; }).join('');
+  var STATS = [['Restless', '12', 'moments'], ['HRV', '58 ms', 'Balanced · 52 to 66'], ['Respiration', '14.2', 'breaths / min'], ['SpO2', '96%', 'overnight average'], ['Resting HR', '54', 'lowest 49 at 04:10'], ['Body Battery', '37 → 88', '+51 overnight', true]];
+  $('sl-stats').innerHTML = STATS.map(function (s) { return '<div class="tile' + (s[3] ? ' hi' : '') + '">' + (s[3] ? '<span class="new tag">New</span>' : '') + '<div class="l">' + s[0] + '</div><div class="v mono" style="' + (s[3] ? 'font-size:17px;' : '') + '">' + s[1] + '</div><div class="s">' + s[2] + '</div></div>'; }).join('');
+
+  // Activity detail
+  lineChart($('ac-hr'), [78,82,86,90,94,96,98,100,102,104,101,98,96,99,103,108,112,116,119,121,118,112,106,100,96,94,92,90,88,86,88,92,96,98,95,90,86,82,80,78], 60, 140, 122, [80, 100, 120], '#ff6b5c', false, ['0', '16', '32', '48', '64'], null);
+  var ZONES = [['Z1', 41, '95 to 114', 64], ['Z2', 19, '114 to 133', 30], ['Z3', 4, '133 to 152', 6], ['Z4', 0, '152 to 171', 0], ['Z5', 0, '171+', 0]], ZC = ['#5d7a12', '#c8f03c', '#f5b400', '#ff9d5c', '#ff6b5c'];
+  $('ac-zones').innerHTML = ZONES.map(function (z, i) { return '<div class="zone"><div class="mono" style="width:22px;font-size:12px;color:#8b9096;">' + z[0] + '</div><div class="trk"><i style="width:' + z[3] + '%;background:' + ZC[i] + ';"></i></div><div class="mono" style="width:44px;text-align:right;font-size:13px;font-weight:600;">' + z[1] + ' m</div><div class="mono" style="width:66px;text-align:right;font-size:11px;color:#6b7076;">' + z[2] + '</div></div>'; }).join('');
+})();
+</script>
