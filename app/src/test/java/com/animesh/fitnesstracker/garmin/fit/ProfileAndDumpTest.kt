@@ -10,12 +10,16 @@ import org.junit.Test
 class ProfileAndDumpTest {
     private val contractMessages = listOf(
         0, 1, 3, 12, 18, 19, 20, 21, 26, 34, 55, 103, 104, 140, 211, 216, 227, 229, 269, 275, 279, 284, 297, 339, 346, 356,
-        369, 370, 371, 378, 382, 384, 397, 398, 402, 403, 407, 410, 412
+        369, 370, 371, 378, 382, 384, 397, 398, 402, 403, 407, 410, 412,
+        // Health Snapshot (file type 70)
+        302, 304, 305, 306, 307, 308, 314, 315, 376, 389, 409
     )
 
     @Test
     fun everyContractMessageIsInTheProfile() {
         for (num in contractMessages) assertNotNull("message $num", Profile.message(num))
+        assertEquals("hsa_heart_rate_data", Profile.message(308)!!.name)
+        assertEquals(100.0, Profile.field(HsaMesg.RESPIRATION, 1)!!.scale, 0.0)
         assertNotNull(Profile.message(Mesg.FIELD_DESCRIPTION))
         assertNotNull(Profile.message(Mesg.DEVELOPER_DATA_ID))
     }

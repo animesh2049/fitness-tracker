@@ -406,7 +406,7 @@ internal object Profile {
             ts(0, "start_timestamp"), f(1, "start_tz_offset", unit = MIN), ts(2, "end_timestamp"), f(3, "end_tz_offset", unit = MIN),
             f(4, "feedback"), f(6, "deleted"), ts(7, "updated_timestamp"), ts(), idx()
         )
-    ).associateBy { it.num }
+    ).plus(HsaProfile.messages).associateBy { it.num }
 
     fun message(num: Int): MessageSpec? = messages[num]
 

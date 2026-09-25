@@ -51,6 +51,9 @@ data class DecodedFit(
     val exerciseTitles: List<ExerciseTitleRec> = emptyList(),
     val sets: List<SetRec> = emptyList(),
     val capabilities: List<CapabilitiesRec> = emptyList(),
+    /** Health Snapshot samples (file type 70), one record per message with its array of values. */
+    val healthSnapshot: List<HsaSampleRec> = emptyList(),
+    val healthSnapshotEvents: List<HsaEventRec> = emptyList(),
     /** Every record in the file, including unknown messages, for diagnostics. */
     val raw: List<RawRecord> = emptyList(),
     val unknownMessageCount: Int = 0,
@@ -417,6 +420,30 @@ data class SetRec(
 
 /** Global message 1 (sent over the GFDI link during the handshake, also present in device.fit). */
 data class CapabilitiesRec(val connectivitySupported: Long?, val sportsSupported: Long? = null)
+
+/** Which Health Snapshot stream an [HsaSampleRec] belongs to. */
+enum class HsaKind { HEART_RATE, STRESS, RESPIRATION, SPO2, STEPS, BODY_BATTERY, WRIST_TEMPERATURE }
+
+/**
+ * One Health Snapshot sample record (messages 304 to 314 and 409). [values] is the record's array
+ * in file order with [processingIntervalSeconds] between elements, starting at [timestamp]; the
+ * units are those of the profile (bpm, breaths per minute, percent, steps, degrees C). Invalid
+ * array elements arrive as 0 from the reader, so heart rate, respiration, SpO2 and wrist
+ * temperature drop values at or below zero, while steps, stress (sentinels -1 and -2 kept) and
+ * Body Battery keep zero. [extraA] and [extraB] carry the record's companion arrays: SpO2
+ * confidence, heart rate status (one element), Body Battery charged and uncharged.
+ */
+data class HsaSampleRec(
+    val kind: HsaKind,
+    val timestamp: Long,
+    val processingIntervalSeconds: Int?,
+    val values: List<Double>,
+    val extraA: List<Double> = emptyList(),
+    val extraB: List<Double> = emptyList()
+)
+
+/** Global message 315, a Health Snapshot event marker (start, end and the like; ids are not documented). */
+data class HsaEventRec(val timestamp: Long, val eventId: Int?)
 
 /** One record as decoded, for diagnostics and tests. Values are already scaled; arrays are lists. */
 data class RawRecord(val globalMessageNumber: Int, val fields: Map<Int, Any?>, val developerFields: Map<String, Any?> = emptyMap())

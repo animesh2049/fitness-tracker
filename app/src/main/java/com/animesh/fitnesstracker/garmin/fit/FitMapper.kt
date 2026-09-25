@@ -96,6 +96,8 @@ private class TypedRecords {
     private val exerciseTitles = ArrayList<ExerciseTitleRec>()
     private val sets = ArrayList<SetRec>()
     private val capabilities = ArrayList<CapabilitiesRec>()
+    private val healthSnapshot = ArrayList<HsaSampleRec>()
+    private val healthSnapshotEvents = ArrayList<HsaEventRec>()
 
     /** Garmin-epoch seconds of the last monitoring record, the base for `timestamp_16`. */
     private var lastMonitoringGarminSeconds: Long? = null
@@ -199,12 +201,34 @@ private class TypedRecords {
             Mesg.SLEEP_RESTLESS_MOMENTS -> f.int(1)?.let { restlessMoments += RestlessMomentsRec(f.long(253), it) }
             Mesg.HILL_SCORE -> f.long(253)?.let { hillScores += HillScoreRec(it, f.int(0), f.int(1), f.int(2), f.int(4)) }
             Mesg.ENDURANCE_SCORE -> f.long(253)?.let { enduranceScores += EnduranceScoreRec(it, f.int(0), f.int(1)) }
+            HsaMesg.STEP -> hsa(f, HsaKind.STEPS, valueField = 1)
+            HsaMesg.SPO2 -> hsa(f, HsaKind.SPO2, valueField = 1, extraA = 2)
+            HsaMesg.STRESS -> hsa(f, HsaKind.STRESS, valueField = 1)
+            HsaMesg.RESPIRATION -> hsa(f, HsaKind.RESPIRATION, valueField = 1)
+            HsaMesg.HEART_RATE -> hsa(f, HsaKind.HEART_RATE, valueField = 2, extraA = 1)
+            HsaMesg.BODY_BATTERY -> hsa(f, HsaKind.BODY_BATTERY, valueField = 1, extraA = 2, extraB = 3)
+            HsaMesg.WRIST_TEMPERATURE -> hsa(f, HsaKind.WRIST_TEMPERATURE, valueField = 1)
+            HsaMesg.EVENT -> f.long(253)?.let { healthSnapshotEvents += HsaEventRec(it, f.int(0)) }
             Mesg.NAP -> {
                 val start = f.long(0)
                 val end = f.long(2)
                 if (start != null && end != null) naps += NapRec(start, end)
             }
         }
+    }
+
+    /** One Health Snapshot sample record; see [HsaSampleRec] for which zeros are dropped. */
+    private fun hsa(f: Fields, kind: HsaKind, valueField: Int, extraA: Int? = null, extraB: Int? = null) {
+        val ts = f.long(253) ?: return
+        val raw = f.doubles(valueField)
+        val values = when (kind) {
+            HsaKind.HEART_RATE, HsaKind.RESPIRATION, HsaKind.SPO2, HsaKind.WRIST_TEMPERATURE -> raw.filter { it > 0 }
+            HsaKind.STEPS, HsaKind.STRESS, HsaKind.BODY_BATTERY -> raw
+        }
+        healthSnapshot += HsaSampleRec(
+            kind = kind, timestamp = ts, processingIntervalSeconds = f.int(0), values = values,
+            extraA = extraA?.let(f::doubles) ?: emptyList(), extraB = extraB?.let(f::doubles) ?: emptyList()
+        )
     }
 
     private fun fileId(f: Fields) = FileIdRec(
@@ -294,7 +318,7 @@ private class TypedRecords {
         functionalMetrics = functionalMetrics, recovery = recovery, maxMet = maxMet, deviceStatus = deviceStatus, sessions = sessions,
         laps = laps, records = records, timeInZone = timeInZone, physiologicalMetrics = physiologicalMetrics, userProfile = userProfile,
         sports = sports, activity = activity, workouts = workouts, workoutSteps = workoutSteps, exerciseTitles = exerciseTitles,
-        sets = sets, capabilities = capabilities, raw = parsed.records,
+        sets = sets, capabilities = capabilities, healthSnapshot = healthSnapshot, healthSnapshotEvents = healthSnapshotEvents, raw = parsed.records,
         unknownMessageCount = parsed.unknownMessageCount, unknownFieldCount = parsed.unknownFieldCount
     )
 }
