@@ -2,6 +2,7 @@ package com.animesh.fitnesstracker.garmin.fitimport
 
 import androidx.room.withTransaction
 import com.animesh.fitnesstracker.data.AppDatabase
+import com.animesh.fitnesstracker.data.model.MetricType
 import com.animesh.fitnesstracker.data.model.SleepNight
 import com.animesh.fitnesstracker.data.model.SleepStage
 import com.animesh.fitnesstracker.data.model.SyncedFile
@@ -84,6 +85,7 @@ class FitImporter(
             health.deleteAllSleepNights()
             health.deleteAllMetrics()
             health.deleteAllIntensity()
+            health.deleteAllBodyBatteryEvents()
             db.syncedFileDao().deleteAll()
         }
         return importFiles(store.listAll())
@@ -106,7 +108,7 @@ class FitImporter(
                 type.isMonitoring -> importMonitoring(fit, touchedNights)
                 type == FitFileType.SLEEP -> importSleep(fit, touchedNights)
                 type == FitFileType.HRV_STATUS -> importHrv(fit, touchedNights)
-                type == FitFileType.METRICS -> importMetrics(fit)
+                type == FitFileType.METRICS -> importMetrics(fit, touchedNights)
                 type == FitFileType.ACTIVITY -> importActivity(fit, path)
                 else -> FileResult()
             }
@@ -151,6 +153,7 @@ class FitImporter(
         if (m.respiration.isNotEmpty()) dao.insertRespiration(m.respiration)
         if (m.intensity.isNotEmpty()) dao.insertIntensity(m.intensity)
         if (m.metrics.isNotEmpty()) dao.insertMetrics(m.metrics)
+        if (m.bodyBatteryEvents.isNotEmpty()) dao.insertBodyBatteryEvents(m.bodyBatteryEvents)
         var nights = 0
         for (window in m.sleepWindows) {
             val bounds = SleepBounds(window.start, window.end, fromEvent = true)
@@ -197,9 +200,10 @@ class FitImporter(
         return FileResult()
     }
 
-    private suspend fun importMetrics(fit: DecodedFit): FileResult {
+    private suspend fun importMetrics(fit: DecodedFit, touchedNights: MutableSet<Long>): FileResult {
         val metrics = rows.metrics(fit)
         if (metrics.isNotEmpty()) db.healthDao().insertMetrics(metrics)
+        touchedNights += rows.nightsTouchedByMetrics(metrics)
         return FileResult()
     }
 
@@ -215,18 +219,29 @@ class FitImporter(
         return FileResult(activities = 1)
     }
 
-    /** Recomputes the overnight averages (respiration, SpO2, lowest HR, HRV) of the given nights from the stored samples. */
+    /**
+     * Recomputes what a night takes from other files: the overnight averages (respiration, SpO2,
+     * lowest HR, HRV) from the stored samples, and the Sleep Coach need and Body Battery start and
+     * end from the metrics file's daily rows. Runs after every batch, so file order does not matter.
+     */
     private suspend fun refreshNights(days: Set<Long>) = db.withTransaction {
         val dao = db.healthDao()
         for (day in days) {
             val night = dao.sleepNight(day) ?: continue
             val hrv = dao.hrvSummary(day)
+            // The need for this night was announced the day before; the same day's row is the fallback.
+            val need = dao.metric(MetricType.SLEEP_NEED, day - 1) ?: dao.metric(MetricType.SLEEP_NEED, day)
+            val battery = dao.metric(MetricType.SLEEP_BODY_BATTERY, day)
             val updated = night.copy(
                 avgRespiration = dao.avgRespirationBetween(night.startTimestamp, night.endTimestamp + 1) ?: night.avgRespiration,
                 avgSpo2 = dao.avgSpo2Between(night.startTimestamp, night.endTimestamp + 1) ?: night.avgSpo2,
                 lowestHr = dao.lowestHeartRateBetween(night.startTimestamp, night.endTimestamp + 1) ?: night.lowestHr,
                 avgHrvMs = hrv?.lastNightAvg ?: night.avgHrvMs,
-                hrvStatus = hrv?.status ?: night.hrvStatus
+                hrvStatus = hrv?.status ?: night.hrvStatus,
+                sleepNeedMin = need?.value?.toInt() ?: night.sleepNeedMin,
+                sleepBaselineMin = need?.extra?.toInt() ?: night.sleepBaselineMin,
+                bodyBatteryEnd = battery?.value?.toInt() ?: night.bodyBatteryEnd,
+                bodyBatteryStart = battery?.extra?.toInt() ?: night.bodyBatteryStart
             )
             if (updated != night) dao.updateSleepNight(updated)
         }

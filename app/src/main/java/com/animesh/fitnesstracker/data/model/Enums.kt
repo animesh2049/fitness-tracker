@@ -30,8 +30,33 @@ enum class ActivityKind(val label: String) {
     val usesPace: Boolean get() = this == RUN || this == WALK || this == HIKE
 }
 
-/** One watch computed number per day, keyed with the day in [DailyMetric]. Stored by name. */
+/**
+ * One watch computed number per day, keyed with the day in [DailyMetric]. Stored by name.
+ * Version 0.5 adds SLEEP_NEED (value: Sleep Coach's demanded minutes for the night that starts on
+ * the day, extra: the usual need), SLEEP_BODY_BATTERY (value: Body Battery at the end of the night
+ * that ended on the day, extra: at its start), FITNESS_AGE and SKIN_TEMP (overnight deviation, once
+ * the watch writes it).
+ */
 enum class MetricType {
     VO2MAX, TRAINING_LOAD_ACUTE, TRAINING_LOAD_CHRONIC, READINESS, ENDURANCE, HILL,
-    RACE_5K, RACE_10K, RACE_HALF, RACE_FULL, RECOVERY_MIN, RMR, FTP, LTHR
+    RACE_5K, RACE_10K, RACE_HALF, RACE_FULL, RECOVERY_MIN, RMR, FTP, LTHR,
+    SLEEP_NEED, SLEEP_BODY_BATTERY, FITNESS_AGE, SKIN_TEMP
+}
+
+/**
+ * What a Body Battery event was, from the watch's kind code (FIT message 407 field 0). The mapping
+ * was read off a Forerunner 570's own events (4 the night's sleep, 0 a recorded activity, 3 a stretch
+ * without measurements) and is confirmed on the watch before any other kind gets a name.
+ */
+enum class BodyBatteryKind {
+    SLEEP, ACTIVITY, UNMEASURED, UNKNOWN;
+
+    companion object {
+        fun fromRaw(kind: Int?): BodyBatteryKind = when (kind) {
+            4 -> SLEEP
+            0 -> ACTIVITY
+            3 -> UNMEASURED
+            else -> UNKNOWN
+        }
+    }
 }

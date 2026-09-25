@@ -5,6 +5,7 @@ import com.animesh.fitnesstracker.data.dao.DayHeartRate
 import com.animesh.fitnesstracker.data.dao.DayIntensity
 import com.animesh.fitnesstracker.data.dao.DayStress
 import com.animesh.fitnesstracker.data.dao.DayTotals
+import com.animesh.fitnesstracker.data.model.BodyBatteryEvent
 import com.animesh.fitnesstracker.data.model.DailyMetric
 import com.animesh.fitnesstracker.data.model.HealthMinute
 import com.animesh.fitnesstracker.data.model.HrvSummary
@@ -38,7 +39,11 @@ data class DayInputs(
     /** The night that ended on the day, when synced. */
     val night: SleepNight?,
     val hrv: HrvSummary?,
-    val metrics: List<DailyMetric>
+    val metrics: List<DailyMetric>,
+    /** Body Battery events that started on the day (version 0.5). */
+    val bodyBatteryEvents: List<BodyBatteryEvent> = emptyList(),
+    /** The latest resting metabolic rate on or before the day, for total calories (version 0.5). */
+    val restingMetabolicRate: DailyMetric? = null
 )
 
 /** Everything the sleep screen needs for one night. */
@@ -75,10 +80,16 @@ class HealthRepository(private val db: AppDatabase, private val zone: ZoneId = Z
         val samples = combine(observeMinutes(epochDay), observeStress(epochDay), observeRestingHr(epochDay), observeIntensityWeek(epochDay)) { m, s, r, i ->
             DayInputs(epochDay, m, s, r, i, null, null, emptyList())
         }
-        return combine(samples, dao.observeSleepNight(epochDay), dao.observeHrvSummary(epochDay), dao.observeMetricsForDay(epochDay)) { d, night, hrv, metrics ->
+        val withNight = combine(samples, dao.observeSleepNight(epochDay), dao.observeHrvSummary(epochDay), dao.observeMetricsForDay(epochDay)) { d, night, hrv, metrics ->
             d.copy(night = night, hrv = hrv, metrics = metrics)
         }
+        return combine(withNight, dao.observeBodyBatteryEvents(epochDay), dao.observeLatestMetric(MetricType.RMR, epochDay)) { d, events, rmr ->
+            d.copy(bodyBatteryEvents = events, restingMetabolicRate = rmr)
+        }
     }
+
+    fun observeBodyBatteryEvents(epochDay: Long): Flow<List<BodyBatteryEvent>> = dao.observeBodyBatteryEvents(epochDay)
+    fun observeBodyBatteryEventsBetween(fromDay: Long, toDay: Long): Flow<List<BodyBatteryEvent>> = dao.observeBodyBatteryEventsBetween(fromDay, toDay)
 
     // Sleep
 

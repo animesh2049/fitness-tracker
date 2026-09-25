@@ -47,6 +47,17 @@ class FixturePipelineTest {
         assertEquals(1, out.restingHr.size)
         assertEquals(SyntheticFixtures.RESTING_HR, out.restingHr.single().bpm)
         assertEquals(listOf(MetricType.RMR to SyntheticFixtures.RESTING_METABOLIC_RATE.toDouble()), out.metrics.map { it.type to it.value })
+        val climbed = out.minutes.sumOf { it.ascentM }
+        assertTrue("the two walks climb a few metres, got $climbed", climbed in 3.0..40.0)
+        assertTrue(out.minutes.sumOf { it.descentM } in 3.0..40.0)
+        assertTrue("the watch writes ascent about once an hour", out.minutes.count { it.ascentM > 0 } in 1..24)
+        val events = out.bodyBatteryEvents
+        assertEquals(3, events.size)
+        val night = events.single { it.kind == com.animesh.fitnesstracker.data.model.BodyBatteryKind.SLEEP }
+        assertEquals(SyntheticFixtures.SLEEP_BATTERY_GAIN, night.delta)
+        assertEquals(SyntheticFixtures.SLEEP_START, night.startTimestamp)
+        assertEquals(SyntheticFixtures.SLEEP_END, night.endTimestamp)
+        assertEquals(-9, events.single { it.kind == com.animesh.fitnesstracker.data.model.BodyBatteryKind.ACTIVITY }.delta)
     }
 
     @Test
@@ -66,6 +77,13 @@ class FixturePipelineTest {
         assertEquals(SyntheticFixtures.SLEEP_SCORE, night.score)
         assertEquals(50, night.restlessMoments)
         assertEquals(50.0, night.avgHrvMs!!, 1e-9)
+        assertEquals("score breakdown from sleep_assessment", 74, night.deepScore)
+        assertEquals(86, night.remScore)
+        assertEquals(85, night.durationScore)
+        assertEquals(79, night.recoveryScore)
+        assertEquals(80, night.awakeScore)
+        assertEquals(2, night.awakeningsCount)
+        assertEquals(8.67, night.avgStressDuringSleep!!, 1e-9)
         assertTrue(night.deepSeconds > 0 && night.lightSeconds > 0 && night.remSeconds > 0)
         assertEquals(night.durationSeconds.toLong(), (night.deepSeconds + night.lightSeconds + night.remSeconds + night.awakeSeconds).toLong())
     }
@@ -76,6 +94,16 @@ class FixturePipelineTest {
             .flatMap { rows.metrics(FitDecoder.decode(fixture(it))) }
         println("metrics=${all.map { it.type.name + "=" + it.value }}")
         assertTrue("at least the recovery metric is expected", all.isNotEmpty())
-        assertEquals(listOf(MetricType.RECOVERY_MIN to 1.0), all.map { it.type to it.value })
+        // Two files describe the 16th; Room's REPLACE keeps the latest row per day and type, so do the same here.
+        val latest = all.groupBy { it.epochDay to it.type }.map { (_, group) -> group.maxBy { it.timestamp } }
+        val morning = latest.filter { it.epochDay == SyntheticFixtures.SLEEP_END.let { s -> java.time.Instant.ofEpochSecond(s).atOffset(zone).toLocalDate().toEpochDay() } }
+        assertEquals(1.0, morning.single { it.type == MetricType.RECOVERY_MIN }.value, 0.0)
+        val need = morning.single { it.type == MetricType.SLEEP_NEED }
+        assertEquals(520.0, need.value, 0.0)
+        assertEquals(480L, need.extra)
+        val battery = morning.single { it.type == MetricType.SLEEP_BODY_BATTERY }
+        assertEquals((SyntheticFixtures.SLEEP_BATTERY_START + SyntheticFixtures.SLEEP_BATTERY_GAIN).toDouble(), battery.value, 0.0)
+        assertEquals(SyntheticFixtures.SLEEP_BATTERY_START.toLong(), battery.extra)
+        assertTrue("the other days carry only their own sleep need and Body Battery rows", all.all { it.type in setOf(MetricType.RECOVERY_MIN, MetricType.SLEEP_NEED, MetricType.SLEEP_BODY_BATTERY) })
     }
 }

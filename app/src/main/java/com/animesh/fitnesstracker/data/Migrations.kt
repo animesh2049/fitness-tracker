@@ -144,3 +144,32 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         db.execSQL("ALTER TABLE `settings` ADD COLUMN `birthYear` INTEGER")
     }
 }
+
+/**
+ * Version 4 (more from the watch): floors per minute, the sleep score breakdown and the Sleep
+ * Coach and Body Battery columns on nights, the Body Battery events table, and performance
+ * condition and benefit on activities. Existing rows get zeros and nulls; the app rebuilds the
+ * health tables from the stored raw files right after the migration.
+ */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `health_minutes` ADD COLUMN `ascentM` REAL NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE `health_minutes` ADD COLUMN `descentM` REAL NOT NULL DEFAULT 0")
+        for (column in listOf(
+            "awakeScore", "awakeningsScore", "deepScore", "lightScore", "remScore", "durationScore", "qualityScore", "recoveryScore",
+            "restlessnessScore", "interruptionsScore", "awakeningsCount", "bodyBatteryStart", "bodyBatteryEnd", "sleepNeedMin", "sleepBaselineMin"
+        )) {
+            db.execSQL("ALTER TABLE `health_sleep_nights` ADD COLUMN `$column` INTEGER")
+        }
+        db.execSQL("ALTER TABLE `health_sleep_nights` ADD COLUMN `avgStressDuringSleep` REAL")
+        db.execSQL("ALTER TABLE `health_sleep_nights` ADD COLUMN `skinTempDeviation` REAL")
+        db.execSQL("ALTER TABLE `activities` ADD COLUMN `performanceCondition` INTEGER")
+        db.execSQL("ALTER TABLE `activities` ADD COLUMN `primaryBenefit` INTEGER")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `health_body_battery_events` (`startTimestamp` INTEGER NOT NULL, `kindRaw` INTEGER NOT NULL, " +
+                "`endTimestamp` INTEGER NOT NULL, `epochDay` INTEGER NOT NULL, `minutes` INTEGER NOT NULL, `delta` INTEGER NOT NULL, " +
+                "`kind` TEXT NOT NULL, PRIMARY KEY(`startTimestamp`, `kindRaw`))"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_health_body_battery_events_epochDay` ON `health_body_battery_events` (`epochDay`)")
+    }
+}

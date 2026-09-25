@@ -18,6 +18,7 @@ import com.animesh.fitnesstracker.data.dao.SyncedFileDao
 import com.animesh.fitnesstracker.data.model.Activity
 import com.animesh.fitnesstracker.data.model.ActivityLap
 import com.animesh.fitnesstracker.data.model.ActivityPoint
+import com.animesh.fitnesstracker.data.model.BodyBatteryEvent
 import com.animesh.fitnesstracker.data.model.DailyMetric
 import com.animesh.fitnesstracker.data.model.DayLog
 import com.animesh.fitnesstracker.data.model.HealthMinute
@@ -57,9 +58,10 @@ import com.animesh.fitnesstracker.data.model.WorkoutGroup
         Meal::class, Ingredient::class, MealStep::class, DietPlan::class, DietPlanCell::class, DietSettings::class,
         SyncedFile::class, HealthMinute::class, StressSample::class, Spo2Sample::class, RespirationSample::class,
         HrvValue::class, RestingHrDaily::class, HrvSummary::class, SleepStage::class, SleepNight::class,
-        DailyMetric::class, IntensityMinute::class, Activity::class, ActivityLap::class, ActivityPoint::class
+        DailyMetric::class, IntensityMinute::class, Activity::class, ActivityLap::class, ActivityPoint::class,
+        BodyBatteryEvent::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -82,7 +84,7 @@ abstract class AppDatabase : RoomDatabase() {
             Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, NAME)
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                 // Migrations are added here as the schema version grows. Never fall back to destructive migration.
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
     }
 }

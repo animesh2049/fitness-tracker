@@ -293,6 +293,7 @@ class WatchViewModel(private val c: AppContainer) : ViewModel() {
 
     fun reimportAll() = runData {
         val s = c.fitImporter.reimportAll()
+        c.healthRebuild.markDone()
         val parts = ArrayList<String>()
         parts += "${String.format(Locale.US, "%,d", s.minuteSamples)} minutes"
         parts += "${s.sleepNights} ${plural(s.sleepNights, "night")}"

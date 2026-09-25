@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.animesh.fitnesstracker.data.model.BodyBatteryEvent
 import com.animesh.fitnesstracker.data.model.DailyMetric
 import com.animesh.fitnesstracker.data.model.HealthMinute
 import com.animesh.fitnesstracker.data.model.HrvSummary
@@ -19,8 +20,8 @@ import com.animesh.fitnesstracker.data.model.Spo2Sample
 import com.animesh.fitnesstracker.data.model.StressSample
 import kotlinx.coroutines.flow.Flow
 
-/** Steps, distance and active calories summed over one day. */
-data class DayTotals(val epochDay: Long, val steps: Int, val distanceM: Double, val activeKcal: Int)
+/** Steps, distance, active calories and metres climbed summed over one day. */
+data class DayTotals(val epochDay: Long, val steps: Int, val distanceM: Double, val activeKcal: Int, val ascentM: Double = 0.0, val descentM: Double = 0.0)
 
 /** Heart rate range of one day, from worn minutes with a reading. */
 data class DayHeartRate(val epochDay: Long, val hrMin: Int, val hrAvg: Double, val hrMax: Int)
@@ -51,13 +52,14 @@ interface HealthDao {
     suspend fun kcalBefore(epochDay: Long, beforeTs: Long): Int
 
     @Query(
-        "SELECT epochDay, COALESCE(SUM(steps), 0) AS steps, COALESCE(SUM(distanceM), 0) AS distanceM, COALESCE(SUM(activeKcal), 0) AS activeKcal " +
-            "FROM health_minutes WHERE epochDay = :epochDay GROUP BY epochDay"
+        "SELECT epochDay, COALESCE(SUM(steps), 0) AS steps, COALESCE(SUM(distanceM), 0) AS distanceM, COALESCE(SUM(activeKcal), 0) AS activeKcal, " +
+            "COALESCE(SUM(ascentM), 0) AS ascentM, COALESCE(SUM(descentM), 0) AS descentM FROM health_minutes WHERE epochDay = :epochDay GROUP BY epochDay"
     )
     fun observeDayTotals(epochDay: Long): Flow<DayTotals?>
 
     @Query(
-        "SELECT epochDay, COALESCE(SUM(steps), 0) AS steps, COALESCE(SUM(distanceM), 0) AS distanceM, COALESCE(SUM(activeKcal), 0) AS activeKcal " +
+        "SELECT epochDay, COALESCE(SUM(steps), 0) AS steps, COALESCE(SUM(distanceM), 0) AS distanceM, COALESCE(SUM(activeKcal), 0) AS activeKcal, " +
+            "COALESCE(SUM(ascentM), 0) AS ascentM, COALESCE(SUM(descentM), 0) AS descentM " +
             "FROM health_minutes WHERE epochDay BETWEEN :fromDay AND :toDay GROUP BY epochDay ORDER BY epochDay"
     )
     fun observeDayTotalsBetween(fromDay: Long, toDay: Long): Flow<List<DayTotals>>
@@ -105,6 +107,20 @@ interface HealthDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStress(rows: List<StressSample>): List<Long>
+
+    // Body Battery events
+
+    @Query("SELECT * FROM health_body_battery_events WHERE epochDay = :epochDay ORDER BY startTimestamp")
+    fun observeBodyBatteryEvents(epochDay: Long): Flow<List<BodyBatteryEvent>>
+
+    @Query("SELECT * FROM health_body_battery_events WHERE epochDay BETWEEN :fromDay AND :toDay ORDER BY startTimestamp")
+    fun observeBodyBatteryEventsBetween(fromDay: Long, toDay: Long): Flow<List<BodyBatteryEvent>>
+
+    @Query("SELECT * FROM health_body_battery_events WHERE epochDay = :epochDay ORDER BY startTimestamp")
+    suspend fun bodyBatteryEvents(epochDay: Long): List<BodyBatteryEvent>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBodyBatteryEvents(rows: List<BodyBatteryEvent>): List<Long>
 
     // Point samples
 
@@ -201,6 +217,12 @@ interface HealthDao {
     @Query("SELECT * FROM health_daily_metrics WHERE type = :type AND epochDay <= :epochDay ORDER BY epochDay DESC LIMIT 1")
     fun observeLatestMetric(type: MetricType, epochDay: Long): Flow<DailyMetric?>
 
+    @Query("SELECT * FROM health_daily_metrics WHERE type = :type AND epochDay <= :epochDay ORDER BY epochDay DESC LIMIT 1")
+    suspend fun latestMetric(type: MetricType, epochDay: Long): DailyMetric?
+
+    @Query("SELECT * FROM health_daily_metrics WHERE type = :type AND epochDay = :epochDay")
+    suspend fun metric(type: MetricType, epochDay: Long): DailyMetric?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMetrics(rows: List<DailyMetric>): List<Long>
 
@@ -256,6 +278,12 @@ interface HealthDao {
 
     @Query("DELETE FROM health_intensity")
     suspend fun deleteAllIntensity()
+
+    @Query("DELETE FROM health_body_battery_events")
+    suspend fun deleteAllBodyBatteryEvents()
+
+    @Query("SELECT COUNT(*) FROM health_body_battery_events")
+    suspend fun countBodyBatteryEvents(): Int
 
     @Query("SELECT COUNT(*) FROM health_minutes")
     suspend fun countMinutes(): Int

@@ -6,6 +6,7 @@ import com.animesh.fitnesstracker.data.AppDatabase
 import com.animesh.fitnesstracker.data.Seed
 import com.animesh.fitnesstracker.garmin.fitimport.FitArchive
 import com.animesh.fitnesstracker.garmin.fitimport.FitImporter
+import com.animesh.fitnesstracker.garmin.fitimport.HealthRebuild
 import com.animesh.fitnesstracker.garmin.sync.FileRawFileStore
 import com.animesh.fitnesstracker.garmin.sync.RawFileStore
 import com.animesh.fitnesstracker.garmin.sync.WatchController
@@ -55,9 +56,12 @@ class AppContainer(val appContext: Context, val database: AppDatabase = AppDatab
     val activities = ActivityRepository(database)
     val syncedFiles = SyncedFileRepository(database)
     val watch = WatchController(context = appContext, store = rawFiles, importHook = fitImporter, scope = appScope)
+    /** One-time rebuild of the health rows after the version 4 schema change (version 0.5). */
+    val healthRebuild = HealthRebuild(appContext, rawFiles, fitImporter)
 
     init {
         appScope.launch { Seed.runIfNeeded(database) }
+        appScope.launch { healthRebuild.runIfNeeded() }
         appScope.launch {
             settings.observe().collect {
                 timer.soundEnabled = it.soundEnabled

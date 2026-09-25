@@ -88,7 +88,7 @@ class FileRawFileStore(override val root: File, private val zone: ZoneId = ZoneI
         private val TIMED = Regex("(\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2})_(\\d+)")
         private val NAMES = mapOf(
             4 to "ACTIVITY", 15 to "MONITOR_A", 28 to "MONITOR_DAILY", 32 to "MONITOR",
-            44 to "METRICS", 49 to "SLEEP", 68 to "HRV_STATUS"
+            44 to "METRICS", 49 to "SLEEP", 68 to "HRV_STATUS", 70 to "HSA", 73 to "SKIN_TEMP"
         )
 
         fun typeName(fitType: Int): String = NAMES[fitType] ?: "OTHER$fitType"

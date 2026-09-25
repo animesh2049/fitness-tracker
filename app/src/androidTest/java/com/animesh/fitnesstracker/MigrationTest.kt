@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.animesh.fitnesstracker.data.AppDatabase
 import com.animesh.fitnesstracker.data.MIGRATION_1_2
 import com.animesh.fitnesstracker.data.MIGRATION_2_3
+import com.animesh.fitnesstracker.data.MIGRATION_3_4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -94,6 +95,56 @@ class MigrationTest {
         db.query("SELECT linkedSessionId FROM activities").use { c ->
             assertTrue(c.moveToFirst())
             assertTrue(c.isNull(0))
+        }
+        db.close()
+    }
+
+    @Test
+    fun migrate3To4AddsHealthColumnsAndTheEventsTable() {
+        helper.createDatabase(TEST_DB, 3).apply {
+            execSQL("INSERT INTO health_minutes (timestamp, epochDay, steps, distanceM, activeKcal, heartRate, activityKind, intensity, worn) VALUES (1000, 20710, 12, 9.5, 1, 70, 6, 0, 1)")
+            execSQL(
+                "INSERT INTO health_sleep_nights (epochDay, startTimestamp, endTimestamp, score, deepSeconds, lightSeconds, remSeconds, awakeSeconds, source) " +
+                    "VALUES (20710, 100, 26000, 81, 5100, 14280, 5400, 1140, 'event')"
+            )
+            execSQL(
+                "INSERT INTO activities (startTimestamp, fitTimeCreated, endTimestamp, sport, subSport, kind, name, timerSeconds, elapsedSeconds, " +
+                    "hrZoneSeconds, hrZoneBounds, filePath) VALUES (100, 100, 200, 10, 20, 'STRENGTH', 'Strength', 90, 100, '', '', 'a.fit')"
+            )
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(TEST_DB, 4, true, MIGRATION_3_4)
+        db.query("SELECT steps, ascentM, descentM FROM health_minutes").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(12, c.getInt(0))
+            assertEquals(0.0, c.getDouble(1), 0.0)
+            assertEquals(0.0, c.getDouble(2), 0.0)
+        }
+        db.query("SELECT score, deepScore, sleepNeedMin, bodyBatteryStart, avgStressDuringSleep, skinTempDeviation FROM health_sleep_nights").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(81, c.getInt(0))
+            for (i in 1..5) assertTrue("column $i is null after the migration", c.isNull(i))
+        }
+        db.query("SELECT performanceCondition, primaryBenefit FROM activities").use { c ->
+            assertTrue(c.moveToFirst())
+            assertTrue(c.isNull(0))
+            assertTrue(c.isNull(1))
+        }
+        db.execSQL("INSERT INTO health_body_battery_events (startTimestamp, kindRaw, endTimestamp, epochDay, minutes, delta, kind) VALUES (100, 4, 28000, 20710, 465, 51, 'SLEEP')")
+        db.query("SELECT COUNT(*) FROM health_body_battery_events WHERE epochDay = 20710").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(1, c.getInt(0))
+        }
+        db.close()
+    }
+
+    @Test
+    fun migrate1To4ChainsEveryMigration() {
+        helper.createDatabase(TEST_DB, 1).close()
+        val db = helper.runMigrationsAndValidate(TEST_DB, 4, true, MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        db.query("SELECT COUNT(*) FROM health_body_battery_events").use { c ->
+            assertTrue(c.moveToFirst())
+            assertEquals(0, c.getInt(0))
         }
         db.close()
     }

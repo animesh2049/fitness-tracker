@@ -40,7 +40,8 @@ class FileRawFileStoreTest {
         assertEquals(3L, f.sizeBytes)
         assertEquals(File(root, "ACTIVITY/2026/ACTIVITY_2026-09-16_07-05-09_88.fit"), store.save(88, 4, ts, byteArrayOf(9)).file)
         assertEquals(File(root, "HRV_STATUS/2026/HRV_STATUS_2026-09-16_07-05-09_7.fit"), store.save(7, 68, ts, byteArrayOf(9)).file)
-        assertEquals(File(root, "OTHER73/2026/OTHER73_2026-09-16_07-05-09_9.fit"), store.save(9, 73, ts, byteArrayOf(9)).file)
+        assertEquals(File(root, "SKIN_TEMP/2026/SKIN_TEMP_2026-09-16_07-05-09_9.fit"), store.save(9, 73, ts, byteArrayOf(9)).file)
+        assertEquals(File(root, "OTHER9/2026/OTHER9_2026-09-16_07-05-09_10.fit"), store.save(10, 9, ts, byteArrayOf(9)).file)
     }
 
     @Test
@@ -100,7 +101,7 @@ class FileRawFileStoreTest {
 
     @Test
     fun `type names round trip`() {
-        for ((num, name) in listOf(4 to "ACTIVITY", 15 to "MONITOR_A", 28 to "MONITOR_DAILY", 32 to "MONITOR", 44 to "METRICS", 49 to "SLEEP", 68 to "HRV_STATUS", 9 to "OTHER9")) {
+        for ((num, name) in listOf(4 to "ACTIVITY", 15 to "MONITOR_A", 28 to "MONITOR_DAILY", 32 to "MONITOR", 44 to "METRICS", 49 to "SLEEP", 68 to "HRV_STATUS", 70 to "HSA", 73 to "SKIN_TEMP", 9 to "OTHER9")) {
             assertEquals(name, FileRawFileStore.typeName(num))
             assertEquals(num, FileRawFileStore.fitType(name))
         }

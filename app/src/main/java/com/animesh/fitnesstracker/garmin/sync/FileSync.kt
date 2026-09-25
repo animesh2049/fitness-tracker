@@ -177,7 +177,8 @@ class FileSync(
     }
 
     companion object {
-        val WANTED_SUBTYPES = setOf(4, 15, 28, 32, 44, 49, 68)
+        /** Activity, the three monitoring kinds, metrics, sleep, HRV status, Health Snapshot (70) and skin temperature (73). */
+        val WANTED_SUBTYPES = setOf(4, 15, 28, 32, 44, 49, 68, 70, 73)
         const val MAX_BAD_CHUNKS = 5
         const val MAX_RELISTS = 3
         private val DAY = DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH)

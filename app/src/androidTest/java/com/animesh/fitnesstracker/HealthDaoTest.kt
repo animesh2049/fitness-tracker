@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.animesh.fitnesstracker.data.AppDatabase
 import com.animesh.fitnesstracker.data.model.ActivityKind
+import com.animesh.fitnesstracker.data.model.BodyBatteryKind
 import com.animesh.fitnesstracker.data.model.HealthMinute
 import com.animesh.fitnesstracker.data.model.MetricType
 import com.animesh.fitnesstracker.data.model.Session
@@ -13,6 +14,8 @@ import com.animesh.fitnesstracker.data.model.SleepNight
 import com.animesh.fitnesstracker.data.model.StressSample
 import com.animesh.fitnesstracker.domain.health.DaySummary
 import com.animesh.fitnesstracker.domain.health.TrendMetric
+import com.animesh.fitnesstracker.garmin.fit.BodyBatteryEventRec
+import com.animesh.fitnesstracker.garmin.fit.DailySleepRec
 import com.animesh.fitnesstracker.garmin.fit.DecodedFit
 import com.animesh.fitnesstracker.garmin.fit.EventRec
 import com.animesh.fitnesstracker.garmin.fit.FileIdRec
@@ -21,6 +24,7 @@ import com.animesh.fitnesstracker.garmin.fit.MonitoringRec
 import com.animesh.fitnesstracker.garmin.fit.RespirationRec
 import com.animesh.fitnesstracker.garmin.fit.RestingHrRec
 import com.animesh.fitnesstracker.garmin.fit.SessionRec
+import com.animesh.fitnesstracker.garmin.fit.SleepDemandRec
 import com.animesh.fitnesstracker.garmin.fit.SleepStageRec
 import com.animesh.fitnesstracker.garmin.fit.SleepStatsRec
 import com.animesh.fitnesstracker.garmin.fit.StressRec
@@ -281,6 +285,73 @@ class HealthDaoTest {
         importer.importFiles(listOf(store.listAll().first { it.fitType == 49 }))
         assertEquals(night, health.observeSleepNight(wedDay).first())
         assertEquals(16, health.observeSleepStages(wedDay).first().size)
+    }
+
+    @Test
+    fun sleepNeedAndBodyBatteryReachTheNightWhicheverFileComesFirst() = runTest {
+        val start = at(wed.minusDays(1), "23:41")
+        val end = at("06:53")
+        val sleep = DecodedFit(
+            FileIdRec(49, timeCreated = end), sleepStages = listOf(SleepStageRec(end, 2)), sleepStats = listOf(SleepStatsRec(end, 81, deepSleepScore = 74)),
+            events = listOf(EventRec(start, 74, 0, null), EventRec(end, 74, 1, null))
+        )
+        // Written the evening before: the need for the coming night.
+        val eveningBefore = at(wed.minusDays(1), "21:00")
+        val demand = DecodedFit(FileIdRec(44, timeCreated = eveningBefore), sleepDemand = listOf(SleepDemandRec(eveningBefore, 480, 520)))
+        // Written the morning after: Body Battery over the night.
+        val morning = DecodedFit(FileIdRec(44, timeCreated = end + 300), dailySleep = listOf(DailySleepRec(end + 300, 81, 900, start, end, 330, 330, 41, 92)))
+        val monitor = monitoringFit(
+            at("21:22"), mon(at("07:00"), steps = 100, hr = 60),
+            events = emptyList()
+        ).copy(bodyBatteryEvents = listOf(BodyBatteryEventRec(start, 4, 432, 51, end), BodyBatteryEventRec(at("07:05"), 0, 58, -10, at("08:03"))))
+
+        // Metrics first, then the sleep file, then the monitoring file: order must not matter.
+        importer.importFiles(listOf(stored("d", demand, 1, 44, eveningBefore), stored("m", morning, 2, 44, end + 300)))
+        assertNull(health.observeSleepNight(wedDay).first())
+        importer.importFiles(listOf(stored("s", sleep, 3, 49, end)))
+        val night = health.observeSleepNight(wedDay).first()!!
+        assertEquals(520, night.sleepNeedMin)
+        assertEquals(480, night.sleepBaselineMin)
+        assertEquals(41, night.bodyBatteryStart)
+        assertEquals(92, night.bodyBatteryEnd)
+        assertEquals(51, night.bodyBatteryGain)
+        assertEquals(74, night.deepScore)
+
+        importer.importFiles(listOf(stored("mon", monitor, 4, 32, at("21:22"))))
+        val events = health.observeBodyBatteryEvents(wedDay).first()
+        assertEquals("the night's charge is filed under the morning it ended on, the walk under its own day", 2, events.size)
+        assertEquals(BodyBatteryKind.SLEEP, events[0].kind)
+        assertEquals(51, events[0].delta)
+        assertEquals(BodyBatteryKind.ACTIVITY, events[1].kind)
+        assertEquals(-10, events[1].delta)
+        assertTrue(health.observeBodyBatteryEvents(wedDay - 1).first().isEmpty())
+        val inputs = health.observeDay(wedDay).first()
+        assertEquals(2, inputs.bodyBatteryEvents.size)
+        assertEquals(2, db.healthDao().countBodyBatteryEvents())
+
+        // A rebuild from the store gives the same night as the incremental imports did (the monitoring file added its overnight samples).
+        val afterMonitor = health.observeSleepNight(wedDay).first()!!
+        assertEquals(14.2, afterMonitor.avgRespiration!!, 0.0)
+        importer.reimportAll()
+        assertEquals(afterMonitor, health.observeSleepNight(wedDay).first())
+        assertEquals(2, db.healthDao().countBodyBatteryEvents())
+    }
+
+    @Test
+    fun dayTotalsIncludeMetresClimbed() = runTest {
+        val fit = monitoringFit(
+            at("21:22"),
+            mon(at("07:00"), steps = 100, hr = 60),
+            MonitoringRec(at("07:00"), null, null, null, null, null, null, null, null, ascentM = 3.5, descentM = 1.0),
+            mon(at("07:05"), steps = 130, hr = 61),
+            MonitoringRec(at("07:05"), null, null, null, null, null, null, null, null, ascentM = 2.5, descentM = 0.0)
+        )
+        importer.importFiles(listOf(stored("asc", fit, 1, 32, at("21:22"))))
+        val totals = health.observeDayTotals(wedDay).first()!!
+        assertEquals(6.0, totals.ascentM, 1e-9)
+        assertEquals(1.0, totals.descentM, 1e-9)
+        assertEquals(130, totals.steps)
+        assertEquals(6.0, health.observeDayTotalsBetween(wedDay, wedDay).first().single().ascentM, 1e-9)
     }
 
     @Test

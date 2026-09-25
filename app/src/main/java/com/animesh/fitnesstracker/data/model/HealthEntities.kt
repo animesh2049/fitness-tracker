@@ -7,7 +7,9 @@ import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 /*
- * Version 3 (Garmin health). Every timestamp is Unix seconds unless the name says otherwise;
+ * Version 3 (Garmin health), extended in version 4 (floors, sleep score breakdown, Sleep Coach need,
+ * Body Battery at sleep start and end, Body Battery events, activity performance condition and
+ * benefit). Every timestamp is Unix seconds unless the name says otherwise;
  * every epochDay is the local calendar day. The watch computes all of these numbers, the app
  * only converts cumulative counters to per-minute deltas and assembles nights from stages.
  */
@@ -48,8 +50,32 @@ data class HealthMinute(
     /** FIT intensity 0..7 from current_activity_type_intensity. */
     val intensity: Int = 0,
     /** False for gap filler rows longer than ten minutes: the watch was off the wrist. */
-    val worn: Boolean = true
+    val worn: Boolean = true,
+    /** Metres climbed and descended in the minute, from the barometric altimeter (version 4). */
+    val ascentM: Double = 0.0,
+    val descentM: Double = 0.0
 )
+
+/**
+ * One Body Battery event as the watch lists them (charged by sleep, drained by a workout...),
+ * from FIT message 407 in the monitoring file. Keyed by start and raw kind. Version 4.
+ */
+@Serializable
+@Entity(tableName = "health_body_battery_events", primaryKeys = ["startTimestamp", "kindRaw"], indices = [Index("epochDay")])
+data class BodyBatteryEvent(
+    val startTimestamp: Long,
+    /** The watch's kind code; [kind] is the app's reading of it. */
+    val kindRaw: Int,
+    val endTimestamp: Long,
+    /** Local day of the start, or of the end for sleep (the morning the night is keyed by). */
+    val epochDay: Long,
+    val minutes: Int,
+    /** Signed Body Battery change over the event. */
+    val delta: Int,
+    val kind: BodyBatteryKind
+) {
+    val charged: Boolean get() = delta > 0
+}
 
 /** Stress and Body Battery, every three minutes. */
 @Serializable
@@ -168,8 +194,32 @@ data class SleepNight(
     val avgSpo2: Double? = null,
     val lowestHr: Int? = null,
     /** "event" when the bounds came from FIT event 74, "stages" when from the first and last stage. */
-    val source: String = SOURCE_STAGES
+    val source: String = SOURCE_STAGES,
+    // Version 4: the watch's score breakdown (sleep_assessment), all 0..100.
+    val awakeScore: Int? = null,
+    val awakeningsScore: Int? = null,
+    val deepScore: Int? = null,
+    val lightScore: Int? = null,
+    val remScore: Int? = null,
+    val durationScore: Int? = null,
+    val qualityScore: Int? = null,
+    val recoveryScore: Int? = null,
+    val restlessnessScore: Int? = null,
+    val interruptionsScore: Int? = null,
+    val awakeningsCount: Int? = null,
+    val avgStressDuringSleep: Double? = null,
+    // Version 4: from the metrics file (daily_sleep and sleep_demand), copied in by the importer.
+    val bodyBatteryStart: Int? = null,
+    val bodyBatteryEnd: Int? = null,
+    /** Sleep Coach's demanded minutes for this night, announced the day before. */
+    val sleepNeedMin: Int? = null,
+    /** The usual need Sleep Coach adjusts from. */
+    val sleepBaselineMin: Int? = null,
+    /** Overnight skin temperature deviation, once the watch writes it (Milestone 37). */
+    val skinTempDeviation: Double? = null
 ) {
+    val bodyBatteryGain: Int? get() = if (bodyBatteryStart != null && bodyBatteryEnd != null) bodyBatteryEnd - bodyBatteryStart else null
+    val hasScoreBreakdown: Boolean get() = durationScore != null || qualityScore != null || deepScore != null
     /** Time asleep: everything but awake. */
     val asleepSeconds: Int get() = deepSeconds + lightSeconds + remSeconds
     val totalSeconds: Int get() = asleepSeconds + awakeSeconds
@@ -250,7 +300,11 @@ data class Activity(
     val hrZoneBounds: String = "",
     /** Raw file path relative to the store root. */
     val filePath: String,
-    val linkedSessionId: Long? = null
+    val linkedSessionId: Long? = null,
+    /** Version 4: signed deviation from the user's baseline at the end of the activity, when the watch computed one. */
+    val performanceCondition: Int? = null,
+    /** Version 4: the watch's training effect label code (see the domain's label table); null or 0 when it gave none. */
+    val primaryBenefit: Int? = null
 ) {
     val zoneSecondsList: List<Int> get() = csvInts(hrZoneSeconds)
     val zoneBoundsList: List<Int> get() = csvInts(hrZoneBounds)

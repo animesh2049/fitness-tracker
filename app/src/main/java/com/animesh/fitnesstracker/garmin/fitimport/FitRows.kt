@@ -4,6 +4,8 @@ import com.animesh.fitnesstracker.data.model.Activity
 import com.animesh.fitnesstracker.data.model.ActivityKind
 import com.animesh.fitnesstracker.data.model.ActivityLap
 import com.animesh.fitnesstracker.data.model.ActivityPoint
+import com.animesh.fitnesstracker.data.model.BodyBatteryEvent
+import com.animesh.fitnesstracker.data.model.BodyBatteryKind
 import com.animesh.fitnesstracker.data.model.DailyMetric
 import com.animesh.fitnesstracker.data.model.HealthMinute
 import com.animesh.fitnesstracker.data.model.HrvSummary
@@ -42,7 +44,8 @@ data class MonitoringRows(
     val respiration: List<RespirationSample> = emptyList(),
     val intensity: List<IntensityMinute> = emptyList(),
     val metrics: List<DailyMetric> = emptyList(),
-    val sleepWindows: List<SleepWindow> = emptyList()
+    val sleepWindows: List<SleepWindow> = emptyList(),
+    val bodyBatteryEvents: List<BodyBatteryEvent> = emptyList()
 )
 
 /** Where a night's bounds came from. */
@@ -107,6 +110,8 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
             var steps = 0L
             var distance = 0.0
             var kcal = 0
+            var ascent = 0.0
+            var descent = 0.0
             var hr: Int? = null
             var kind: Int? = null
             var intensity = 0
@@ -130,6 +135,9 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
                 r.heartRate?.let { if (it > 0) hr = it }
                 r.activityType?.let { kind = it }
                 r.intensity?.let { if (it > intensity) intensity = it }
+                // Ascent and descent records carry the climb since the previous one, not a running total.
+                r.ascentM?.let { if (it > 0) ascent += it }
+                r.descentM?.let { if (it > 0) descent += it }
             }
             if (first) {
                 // Subtract what earlier files of the same day already contributed.
@@ -140,7 +148,7 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
             }
             val row = HealthMinute(
                 timestamp = rowTs, epochDay = day, steps = steps.toInt(), distanceM = distance, activeKcal = kcal,
-                heartRate = hr, activityKind = kind ?: prevKind, intensity = intensity, worn = true
+                heartRate = hr, activityKind = kind ?: prevKind, intensity = intensity, worn = true, ascentM = ascent, descentM = descent
             )
             minutes += row
             prevRowTs = rowTs
@@ -180,8 +188,25 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
             DailyMetric(epochDay(info.timestamp), MetricType.RMR, rmr.toDouble(), null, info.timestamp)
         }.let(::latestPerDay)
 
-        return MonitoringRows(minutes, stress, restingHr, spo2, respiration, intensity, metrics, sleepWindows(fit.events))
+        return MonitoringRows(minutes, stress, restingHr, spo2, respiration, intensity, metrics, sleepWindows(fit.events), bodyBatteryEvents(fit))
     }
+
+    /**
+     * Body Battery events with a duration and a delta; the end falls back to start plus duration.
+     * An event belongs to the day it started on, except sleep, which belongs to the morning it
+     * ended on, the same day the app keys the night by, so the night's charge shows with the night.
+     */
+    fun bodyBatteryEvents(fit: DecodedFit): List<BodyBatteryEvent> = fit.bodyBatteryEvents.mapNotNull { e ->
+        val minutes = e.durationMinutes ?: return@mapNotNull null
+        val delta = e.delta ?: return@mapNotNull null
+        val kindRaw = e.kind ?: return@mapNotNull null
+        val kind = BodyBatteryKind.fromRaw(kindRaw)
+        val end = e.endTimestamp ?: (e.timestamp + minutes * MINUTE)
+        BodyBatteryEvent(
+            startTimestamp = e.timestamp, kindRaw = kindRaw, endTimestamp = end,
+            epochDay = epochDay(if (kind == BodyBatteryKind.SLEEP) end else e.timestamp), minutes = minutes, delta = delta, kind = kind
+        )
+    }.distinctBy { it.startTimestamp to it.kindRaw }
 
     /** Start and end pairs of FIT event 74. An unmatched start is dropped. */
     fun sleepWindows(events: List<EventRec>): List<SleepWindow> {
@@ -251,6 +276,7 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
             SleepBounds(prior.startTimestamp, prior.endTimestamp, fromEvent = true)
         } else bounds
         val score = fit.sleepStats.lastOrNull { it.overallSleepScore != null }?.overallSleepScore ?: prior?.score
+        val stats = fit.sleepStats.lastOrNull { it.overallSleepScore != null } ?: fit.sleepStats.lastOrNull()
         val restless = fit.restlessMoments.lastOrNull()?.count ?: prior?.restlessMoments
         return SleepNight(
             epochDay = epochDay(useBounds.end),
@@ -267,7 +293,24 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
             avgRespiration = prior?.avgRespiration,
             avgSpo2 = prior?.avgSpo2,
             lowestHr = prior?.lowestHr,
-            source = useBounds.source
+            source = useBounds.source,
+            awakeScore = stats?.awakeTimeScore ?: prior?.awakeScore,
+            awakeningsScore = stats?.awakeningsCountScore ?: prior?.awakeningsScore,
+            deepScore = stats?.deepSleepScore ?: prior?.deepScore,
+            lightScore = stats?.lightSleepScore ?: prior?.lightScore,
+            remScore = stats?.remSleepScore ?: prior?.remScore,
+            durationScore = stats?.sleepDurationScore ?: prior?.durationScore,
+            qualityScore = stats?.sleepQualityScore ?: prior?.qualityScore,
+            recoveryScore = stats?.sleepRecoveryScore ?: prior?.recoveryScore,
+            restlessnessScore = stats?.sleepRestlessnessScore ?: prior?.restlessnessScore,
+            interruptionsScore = stats?.interruptionsScore ?: prior?.interruptionsScore,
+            awakeningsCount = stats?.awakeningsCount ?: prior?.awakeningsCount,
+            avgStressDuringSleep = stats?.averageStressDuringSleep?.takeIf { it >= 0 } ?: prior?.avgStressDuringSleep,
+            bodyBatteryStart = prior?.bodyBatteryStart,
+            bodyBatteryEnd = prior?.bodyBatteryEnd,
+            sleepNeedMin = prior?.sleepNeedMin,
+            sleepBaselineMin = prior?.sleepBaselineMin,
+            skinTempDeviation = prior?.skinTempDeviation
         )
     }
 
@@ -312,9 +355,29 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
         }
         // Recovery time 0 is a real value: fully recovered.
         for (r in fit.recovery) add(r.timestamp, MetricType.RECOVERY_MIN, r.recoveryMinutes)
-        for (r in fit.maxMet) add(r.timestamp, MetricType.VO2MAX, r.vo2Max?.takeIf { it > 0 }, r.category)
+        for (r in fit.maxMet) {
+            add(r.timestamp, MetricType.VO2MAX, r.vo2Max?.takeIf { it > 0 }, r.category)
+            add(r.timestamp, MetricType.FITNESS_AGE, r.fitnessAge?.takeIf { it > 0 })
+        }
         for (r in fit.monitoringInfo) add(r.timestamp, MetricType.RMR, r.restingMetabolicRate?.takeIf { it > 0 })
+        // Sleep Coach: the demanded minutes, keyed by the day the record was written (the night starts that evening).
+        for (r in fit.sleepDemand) add(r.timestamp, MetricType.SLEEP_NEED, r.demandMinutes?.takeIf { it > 0 }, r.normalMinutes)
+        // Body Battery at the end and start of the night that ended on the day.
+        for (r in fit.dailySleep) {
+            val end = r.bodyBatteryEnd?.takeIf { it in 0..100 } ?: continue
+            add(r.endTimestamp ?: r.timestamp, MetricType.SLEEP_BODY_BATTERY, end, r.bodyBatteryStart?.takeIf { it in 0..100 })
+        }
         return latestPerDay(rows)
+    }
+
+    /** Days whose night row should pick up new sleep need or Body Battery values from these metrics. */
+    fun nightsTouchedByMetrics(metrics: List<DailyMetric>): Set<Long> = metrics.flatMapTo(LinkedHashSet()) { m ->
+        when (m.type) {
+            MetricType.SLEEP_BODY_BATTERY -> listOf(m.epochDay)
+            // The need written on day D is for the night that ends on D + 1; D itself is the fallback the importer also checks.
+            MetricType.SLEEP_NEED -> listOf(m.epochDay, m.epochDay + 1)
+            else -> emptyList()
+        }
     }
 
     private fun latestPerDay(rows: List<DailyMetric>): List<DailyMetric> =
@@ -377,7 +440,9 @@ class FitRows(private val zone: ZoneId = ZoneId.systemDefault()) {
             vo2max = physio?.metMax?.takeIf { it > 0 }?.let { Math.round(it * 3.5 * 10) / 10.0 },
             hrZoneSeconds = Activity.csv(zoneSeconds),
             hrZoneBounds = Activity.csv(zoneBounds),
-            filePath = filePath
+            filePath = filePath,
+            performanceCondition = physio?.endingPerformanceCondition,
+            primaryBenefit = physio?.primaryBenefit
         )
         val laps = fit.laps.mapIndexed { index, lap ->
             val lapTimer = lap.totalTimerTime?.roundToInt() ?: lap.totalElapsedTime?.roundToInt() ?: 0
