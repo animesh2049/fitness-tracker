@@ -16,15 +16,24 @@ enum class TrendMetric(val label: String, val unit: String, val higherIsBetter: 
     VO2MAX("VO2 max", "", true, false),
     TRAINING_LOAD("Training load", "", true, true),
     READINESS("Readiness", "", true, false),
-    INTENSITY_MINUTES("Intensity minutes", "min", true, true)
+    INTENSITY_MINUTES("Intensity minutes", "min", true, true),
+    /** Floors climbed per day (version 0.5). */
+    FLOORS("Floors", "floors", true, true),
+    /** Total calories per day; the secondary value is the active part (version 0.5). */
+    CALORIES("Calories", "kcal", true, true),
+    /** Minutes asleep per night; the secondary value is Sleep Coach's need for that night (version 0.5). */
+    SLEEP_NEED("Sleep need", "min", true, true)
 }
 
 enum class TrendPeriod(val label: String, val bucketCount: Int) {
     DAY7("7 days", 7), WEEK4("4 weeks", 4), MONTH6("6 months", 6), YEAR12("1 year", 12)
 }
 
-/** One bar or point: the local days it covers (inclusive) and the average of the days with data. */
-data class TrendBucket(val startDay: Long, val endDay: Long, val value: Double?, val label: String) {
+/**
+ * One bar or point: the local days it covers (inclusive) and the average of the days with data.
+ * [secondary] is the metric's second series (active calories, the sleep need) averaged the same way.
+ */
+data class TrendBucket(val startDay: Long, val endDay: Long, val value: Double?, val label: String, val secondary: Double? = null) {
     val hasValue: Boolean get() = value != null
 }
 
@@ -107,11 +116,18 @@ object Trends {
         return (start - length) to (start - 1)
     }
 
-    fun bucket(metric: TrendMetric, valuesByDay: Map<Long, Double>, period: TrendPeriod, today: Long): TrendResult {
+    fun bucket(
+        metric: TrendMetric,
+        valuesByDay: Map<Long, Double>,
+        period: TrendPeriod,
+        today: Long,
+        secondaryByDay: Map<Long, Double> = emptyMap()
+    ): TrendResult {
         val bounds = bucketBounds(period, today)
         val buckets = bounds.map { (start, end) ->
             val values = (start..end).mapNotNull { valuesByDay[it] }
-            TrendBucket(start, end, if (values.isEmpty()) null else values.average(), label(period, start))
+            val secondary = (start..end).mapNotNull { secondaryByDay[it] }
+            TrendBucket(start, end, if (values.isEmpty()) null else values.average(), label(period, start), if (secondary.isEmpty()) null else secondary.average())
         }
         val currentValues = (bounds.first().first..bounds.last().second).mapNotNull { valuesByDay[it] }
         val (prevStart, prevEnd) = previousBounds(period, bounds)

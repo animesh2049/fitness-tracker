@@ -3,6 +3,8 @@ package com.animesh.fitnesstracker
 import com.animesh.fitnesstracker.data.model.Activity
 import com.animesh.fitnesstracker.data.model.ActivityKind
 import com.animesh.fitnesstracker.data.model.ActivityPoint
+import com.animesh.fitnesstracker.data.model.BodyBatteryEvent
+import com.animesh.fitnesstracker.data.model.BodyBatteryKind
 import com.animesh.fitnesstracker.data.model.HealthMinute
 import com.animesh.fitnesstracker.data.model.IntensityMinute
 import com.animesh.fitnesstracker.data.model.Session
@@ -11,8 +13,13 @@ import com.animesh.fitnesstracker.data.model.Settings
 import com.animesh.fitnesstracker.data.model.SleepNight
 import com.animesh.fitnesstracker.data.model.SleepStage
 import com.animesh.fitnesstracker.data.model.StressSample
+import com.animesh.fitnesstracker.domain.health.BodyBatteryEvents
 import com.animesh.fitnesstracker.domain.health.DaySummary
+import com.animesh.fitnesstracker.domain.health.Floors
 import com.animesh.fitnesstracker.domain.health.HrZones
+import com.animesh.fitnesstracker.domain.health.PrimaryBenefit
+import com.animesh.fitnesstracker.domain.health.SleepNeeds
+import com.animesh.fitnesstracker.domain.health.SleepScoreBreakdown
 import com.animesh.fitnesstracker.domain.health.PaceFormat
 import com.animesh.fitnesstracker.domain.health.SessionMatcher
 import com.animesh.fitnesstracker.domain.health.SleepNights
@@ -428,5 +435,205 @@ class SessionMatcherTest {
         assertEquals(setOf(1L to 1L, 2L to 2L), pairs.map { it.first.id to it.second.id }.toSet())
         assertTrue(SessionMatcher.linkActivities(listOf(lift.copy(linkedSessionId = 5)), listOf(evening)).isEmpty())
         assertNotNull(SessionMatcher.match(lateLift, listOf(evening)))
+    }
+}
+
+class FloorsAndCaloriesTest {
+    private val f = HealthFixtures
+
+    private fun climb(ascent: Double, descent: Double = 0.0) = listOf(
+        HealthMinute(timestamp = f.at("07:00"), epochDay = f.WED_DAY, steps = 10, activeKcal = 40, ascentM = ascent, descentM = descent),
+        HealthMinute(timestamp = f.at("07:01"), epochDay = f.WED_DAY, steps = 10, activeKcal = 60)
+    )
+
+    private fun summary(minutes: List<HealthMinute>, rmr: Int? = null, now: Long? = null) =
+        DaySummary.compute(f.WED_DAY, minutes, emptyList(), null, emptyList(), 10_000, f.ZONE, restingMetabolicRate = rmr, nowSeconds = now)
+
+    @Test
+    fun floorsAreThreeMetresEachRoundedDown() {
+        assertEquals(2, Floors.of(7.4))
+        assertEquals(0, Floors.of(2.9))
+        assertEquals(1, Floors.of(3.0))
+        assertEquals(0, Floors.of(-1.0))
+        val s = summary(climb(7.4, 3.1))
+        assertEquals(7.4, s.ascentM, 1e-9)
+        assertEquals(3.1, s.descentM, 1e-9)
+        assertEquals(2, s.floors)
+        assertEquals(1, s.descentFloors)
+        assertEquals(3.0, DaySummary.METRES_PER_FLOOR, 0.0)
+    }
+
+    @Test
+    fun restingCaloriesAreProratedThroughTheCurrentDay() {
+        val start = f.at("00:00")
+        assertEquals(0, summary(climb(0.0), rmr = 2_160, now = start).restingKcal)
+        assertEquals(1_080, summary(climb(0.0), rmr = 2_160, now = f.at("12:00")).restingKcal)
+        assertEquals(2_160, summary(climb(0.0), rmr = 2_160, now = f.at(f.WED.plusDays(3), "09:00")).restingKcal)
+        assertEquals("a day still to come has no resting calories yet", 0, summary(climb(0.0), rmr = 2_160, now = f.at(f.WED.minusDays(1), "09:00")).restingKcal)
+        assertEquals("without a clock the day counts as finished", 2_160, summary(climb(0.0), rmr = 2_160).restingKcal)
+        assertNull(summary(climb(0.0)).restingKcal)
+        assertNull(summary(climb(0.0)).totalKcal)
+    }
+
+    @Test
+    fun totalCaloriesAddActiveToResting() {
+        val s = summary(climb(0.0), rmr = 2_160, now = f.at("12:00"))
+        assertEquals(100, s.activeKcal)
+        assertEquals(1_180, s.totalKcal)
+        assertEquals(2_260, summary(climb(0.0), rmr = 2_160).totalKcal)
+    }
+}
+
+class BodyBatteryDayTest {
+    private val f = HealthFixtures
+
+    private fun event(start: String, minutes: Int, delta: Int, kind: BodyBatteryKind, raw: Int = 0, startDate: java.time.LocalDate = f.WED) = BodyBatteryEvent(
+        startTimestamp = f.at(startDate, start), kindRaw = raw, endTimestamp = f.at(startDate, start) + minutes * 60L, epochDay = f.WED_DAY,
+        minutes = minutes, delta = delta, kind = kind
+    )
+
+    private fun activity(name: String, start: String, end: String) = Activity(
+        startTimestamp = f.at(start), fitTimeCreated = f.at(start), endTimestamp = f.at(end), sport = 10, subSport = 20,
+        kind = ActivityKind.STRENGTH, name = name, timerSeconds = 3_000, elapsedSeconds = 3_600, filePath = "a.fit"
+    )
+
+    @Test
+    fun dayTotalsSortingTitlesAndOvernight() {
+        val walk = event("07:05", 58, -10, BodyBatteryKind.ACTIVITY)
+        val night = event("23:41", 432, 51, BodyBatteryKind.SLEEP, raw = 4, startDate = f.WED.minusDays(1))
+        val gap = event("13:00", 32, 0, BodyBatteryKind.UNMEASURED, raw = 3)
+        val unknownUp = event("16:00", 20, 3, BodyBatteryKind.UNKNOWN, raw = 9)
+        val unknownDown = event("18:00", 20, -4, BodyBatteryKind.UNKNOWN, raw = 9)
+        val sleepNight = SleepNight(epochDay = f.WED_DAY, startTimestamp = f.NIGHT_START, endTimestamp = f.at("06:53"), bodyBatteryStart = 37, bodyBatteryEnd = 88)
+        val day = BodyBatteryEvents.day(listOf(unknownDown, walk, gap, night, unknownUp), listOf(activity("Upper A", "07:00", "08:05")), sleepNight, f.ZONE)
+        assertEquals(listOf("Sleep", "Workout · Upper A", "Not worn", "Charged", "Drained"), day.rows.map { it.title })
+        assertEquals("23:41 to 06:53 · 7 h 12 m", day.rows[0].detail)
+        assertEquals("07:05 to 08:03 · 58 min", day.rows[1].detail)
+        assertEquals(54, day.chargedTotal)
+        assertEquals(14, day.drainedTotal)
+        assertEquals(37, day.overnightStart)
+        assertEquals(88, day.overnightEnd)
+        assertEquals(51, day.overnightGain)
+        assertTrue(day.hasEvents)
+    }
+
+    @Test
+    fun activityTitleNeedsHalfTheEventOverlapping() {
+        val walk = event("07:05", 58, -10, BodyBatteryKind.ACTIVITY)
+        assertEquals("Workout", BodyBatteryEvents.day(listOf(walk), listOf(activity("Late", "07:40", "08:30")), null, f.ZONE).rows.single().title)
+        assertEquals("Workout · Upper A", BodyBatteryEvents.day(listOf(walk), listOf(activity("Upper A", "07:34", "08:30")), null, f.ZONE).rows.single().title)
+        val both = BodyBatteryEvents.day(listOf(walk), listOf(activity("Short", "07:00", "07:40"), activity("Long", "07:10", "08:30")), null, f.ZONE)
+        assertEquals("Workout · Long", both.rows.single().title)
+        val sleep = event("23:41", 432, 51, BodyBatteryKind.SLEEP, raw = 4)
+        assertEquals("Sleep", BodyBatteryEvents.day(listOf(sleep), listOf(activity("Night owl", "23:41", "06:53")), null, f.ZONE).rows.single().title)
+    }
+
+    @Test
+    fun emptyDayAndUnknownLabels() {
+        val empty = BodyBatteryEvents.day(emptyList(), emptyList(), null, f.ZONE)
+        assertFalse(empty.hasEvents)
+        assertEquals(0, empty.chargedTotal)
+        assertNull(empty.overnightGain)
+        assertEquals("Charged", BodyBatteryEvents.kindLabel(event("10:00", 5, 0, BodyBatteryKind.UNKNOWN)))
+        assertEquals("Drained", BodyBatteryEvents.kindLabel(event("10:00", 5, -1, BodyBatteryKind.UNKNOWN)))
+        assertEquals("Not worn", BodyBatteryEvents.kindLabel(event("10:00", 5, 0, BodyBatteryKind.UNMEASURED)))
+        assertEquals("1 h 00 m", BodyBatteryEvents.duration(3_600))
+        assertEquals("59 min", BodyBatteryEvents.duration(59 * 60 + 30))
+    }
+}
+
+class SleepScoreTest {
+    private val f = HealthFixtures
+
+    private fun night() = SleepNight(
+        epochDay = f.WED_DAY, startTimestamp = f.NIGHT_START, endTimestamp = f.at("06:53"), score = 81,
+        deepSeconds = 85 * 60, lightSeconds = 238 * 60, remSeconds = 90 * 60, awakeSeconds = 19 * 60, restlessMoments = 12,
+        awakeScore = 70, awakeningsScore = 74, deepScore = 74, lightScore = 78, remScore = 86, durationScore = 89, qualityScore = 84,
+        recoveryScore = 100, restlessnessScore = 71, interruptionsScore = 72, awakeningsCount = 2, sleepNeedMin = 520, sleepBaselineMin = 480
+    )
+
+    @Test
+    fun breakdownRowsFollowTheFixedOrderWithBandsAndDetails() {
+        val rows = SleepScoreBreakdown.rows(night())
+        assertEquals(listOf("Duration", "Quality", "Deep", "Light", "REM", "Restlessness", "Interruptions", "Awake time", "Awakenings", "Recovery"), rows.map { it.name })
+        assertEquals(listOf(89, 84, 74, 78, 86, 71, 72, 70, 74, 100), rows.map { it.score })
+        assertEquals(listOf("Good", "Good", "Fair", "Fair", "Good", "Fair", "Fair", "Fair", "Fair", "Excellent"), rows.map { it.band })
+        assertEquals("12 moments", rows[5].detail)
+        assertEquals("19 m", rows[7].detail)
+        assertEquals("2 times", rows[8].detail)
+        assertNull(rows[0].detail)
+        assertEquals("1 time", SleepScoreBreakdown.rows(night().copy(awakeningsCount = 1))[8].detail)
+        assertEquals("1 h 05 m", SleepScoreBreakdown.awakeDuration(65 * 60))
+    }
+
+    @Test
+    fun breakdownSkipsNullScoresAndDetails() {
+        val partial = SleepScoreBreakdown.rows(night().copy(qualityScore = null, recoveryScore = null, restlessMoments = null, awakeSeconds = 0, awakeningsCount = null))
+        assertEquals(listOf("Duration", "Deep", "Light", "REM", "Restlessness", "Interruptions", "Awake time", "Awakenings"), partial.map { it.name })
+        assertTrue(partial.all { it.detail == null })
+        assertTrue(SleepScoreBreakdown.rows(SleepNight(epochDay = f.WED_DAY, startTimestamp = f.NIGHT_START, endTimestamp = f.at("06:53"))).isEmpty())
+    }
+
+    @Test
+    fun sleepNeedComparesTheNightWithTheCoach() {
+        val need = SleepNeeds.of(night())!!
+        assertEquals(520, need.needMin)
+        assertEquals(480, need.baselineMin)
+        assertEquals(413, need.sleptMin)
+        assertEquals(107, need.shortByMin)
+        assertFalse(need.met)
+        assertEquals(413f / 520f, need.fraction, 1e-6f)
+        val met = SleepNeeds.of(night().copy(sleepNeedMin = 400))!!
+        assertTrue(met.met)
+        assertEquals(0, met.shortByMin)
+        assertEquals(1f, met.fraction, 0f)
+        assertNull(SleepNeeds.of(night().copy(sleepNeedMin = null)))
+        val eventOnly = SleepNeeds.of(night().copy(deepSeconds = 0, lightSeconds = 0, remSeconds = 0, awakeSeconds = 0))!!
+        assertEquals("falls back to the night's length", 432, eventOnly.sleptMin)
+    }
+
+    @Test
+    fun primaryBenefitLabels() {
+        assertEquals("Recovery", PrimaryBenefit.label(1))
+        assertEquals("Base", PrimaryBenefit.label(2))
+        assertEquals("Tempo", PrimaryBenefit.label(3))
+        assertEquals("Threshold", PrimaryBenefit.label(4))
+        assertEquals("VO2 max", PrimaryBenefit.label(5))
+        assertEquals("Anaerobic capacity", PrimaryBenefit.label(6))
+        assertEquals("Sprint", PrimaryBenefit.label(7))
+        assertNull(PrimaryBenefit.label(0))
+        assertNull(PrimaryBenefit.label(null))
+        assertNull(PrimaryBenefit.label(42))
+    }
+}
+
+class TrendSecondaryTest {
+    private val today = HealthFixtures.WED_DAY
+
+    @Test
+    fun secondarySeriesIsAveragedPerBucketAndNullWithoutData() {
+        val values = (0..6).associate { today - it to 420.0 + it }
+        val need = mapOf(today to 520.0, today - 1 to 480.0)
+        val r = Trends.bucket(TrendMetric.SLEEP_NEED, values, TrendPeriod.DAY7, today, need)
+        assertEquals(7, r.buckets.size)
+        assertEquals(520.0, r.buckets.last().secondary!!, 0.0)
+        assertEquals(480.0, r.buckets[5].secondary!!, 0.0)
+        assertNull(r.buckets[0].secondary)
+        assertTrue(r.bars)
+        val weekly = Trends.bucket(TrendMetric.CALORIES, values, TrendPeriod.WEEK4, today, mapOf(today to 400.0, today - 1 to 300.0))
+        val lastWeek = weekly.buckets.last()
+        assertEquals(350.0, lastWeek.secondary!!, 0.0)
+        assertNull("no secondary given, no secondary out", Trends.bucket(TrendMetric.STEPS, values, TrendPeriod.DAY7, today).buckets.last().secondary)
+    }
+
+    @Test
+    fun newMetricsAreBarsAndHigherIsBetter() {
+        for (m in listOf(TrendMetric.FLOORS, TrendMetric.CALORIES, TrendMetric.SLEEP_NEED)) {
+            assertTrue(m.name, m.bars)
+            assertTrue(m.name, m.higherIsBetter)
+        }
+        assertEquals("floors", TrendMetric.FLOORS.unit)
+        assertEquals("kcal", TrendMetric.CALORIES.unit)
+        assertEquals("min", TrendMetric.SLEEP_NEED.unit)
     }
 }

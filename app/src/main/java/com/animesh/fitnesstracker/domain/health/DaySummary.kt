@@ -48,14 +48,36 @@ data class DaySummary(
     val intensityModerate: Int,
     val intensityVigorous: Int,
     val intensityTarget: Int,
-    val wornMinutes: Int
+    val wornMinutes: Int,
+    /** Metres climbed and descended over the day (version 0.5). */
+    val ascentM: Double = 0.0,
+    val descentM: Double = 0.0,
+    /** Resting calories so far: the watch's resting metabolic rate prorated through the current day; null without an RMR. */
+    val restingKcal: Int? = null
 ) {
+    /** Floors climbed, Garmin's rule of 3 m per floor. */
+    val floors: Int get() = Floors.of(ascentM)
+    val descentFloors: Int get() = Floors.of(descentM)
+    /** Resting plus active calories, null when the resting side is unknown. */
+    val totalKcal: Int? get() = restingKcal?.let { it + activeKcal }
     val stepProgress: Float get() = if (stepGoal <= 0) 0f else (steps.toFloat() / stepGoal).coerceIn(0f, 1f)
     val intensityProgress: Float get() = if (intensityTarget <= 0) 0f else (intensityMinutes.toFloat() / intensityTarget).coerceIn(0f, 1f)
     val hasData: Boolean get() = wornMinutes > 0 || bodyBatteryCurrent != null || stressAvg != null
 
     companion object {
         const val INTENSITY_TARGET = 150
+        const val METRES_PER_FLOOR = Floors.METRES_PER_FLOOR
+
+        /**
+         * Resting calories for a day from a kcal/day rate: the whole rate for a finished day, the
+         * elapsed fraction for the day [nowSeconds] falls in, nothing for a day still to come.
+         */
+        fun restingCalories(restingMetabolicRate: Int?, dayStart: Long, dayEnd: Long, nowSeconds: Long?): Int? {
+            val rmr = restingMetabolicRate ?: return null
+            if (nowSeconds == null || nowSeconds >= dayEnd) return rmr
+            if (nowSeconds < dayStart) return 0
+            return Math.round(rmr * (nowSeconds - dayStart).toDouble() / (dayEnd - dayStart)).toInt()
+        }
 
         /** Stress sample cadence: a sample counts for the time to the next one, at most this long. */
         private const val STRESS_SAMPLE_SECONDS = 180L
@@ -75,6 +97,9 @@ data class DaySummary(
          * @param restingHr the watch's resting heart rate for the day.
          * @param intensityWeek intensity rows from the Monday of the day's week onwards; rows outside
          *   Monday 00:00 to the end of the day are ignored so the total resets on Monday.
+         * @param restingMetabolicRate the watch's resting metabolic rate in kcal/day (the latest RMR
+         *   metric on or before the day), for resting and total calories.
+         * @param nowSeconds the current time, so today's resting calories are prorated; null treats the day as finished.
          */
         fun compute(
             epochDay: Long,
@@ -83,7 +108,9 @@ data class DaySummary(
             restingHr: Int?,
             intensityWeek: List<IntensityMinute>,
             stepGoal: Int,
-            zone: ZoneId = ZoneId.systemDefault()
+            zone: ZoneId = ZoneId.systemDefault(),
+            restingMetabolicRate: Int? = null,
+            nowSeconds: Long? = null
         ): DaySummary {
             val worn = minutes.filter { it.worn }
             val hrRows = worn.filter { (it.heartRate ?: 0) > 0 }
@@ -109,6 +136,7 @@ data class DaySummary(
             }
 
             val weekStart = Dates.dayStartSeconds(Dates.mondayOf(epochDay), zone)
+            val dayStart = Dates.dayStartSeconds(epochDay, zone)
             val dayEnd = Dates.dayEndSeconds(epochDay, zone)
             val week = intensityWeek.filter { it.timestamp >= weekStart && it.timestamp < dayEnd }
             val moderate = week.sumOf { it.moderate }
@@ -133,7 +161,10 @@ data class DaySummary(
                 intensityModerate = moderate,
                 intensityVigorous = vigorous,
                 intensityTarget = INTENSITY_TARGET,
-                wornMinutes = worn.size
+                wornMinutes = worn.size,
+                ascentM = minutes.sumOf { it.ascentM },
+                descentM = minutes.sumOf { it.descentM },
+                restingKcal = restingCalories(restingMetabolicRate, dayStart, dayEnd, nowSeconds)
             )
         }
     }

@@ -18,6 +18,8 @@ import com.animesh.fitnesstracker.data.model.SleepNight
 import com.animesh.fitnesstracker.data.model.SleepStage
 import com.animesh.fitnesstracker.data.model.Spo2Sample
 import com.animesh.fitnesstracker.data.model.StressSample
+import com.animesh.fitnesstracker.domain.health.DaySummary
+import com.animesh.fitnesstracker.domain.health.Floors
 import com.animesh.fitnesstracker.domain.health.TrendMetric
 import com.animesh.fitnesstracker.domain.health.TrendPeriod
 import com.animesh.fitnesstracker.domain.health.TrendResult
@@ -26,6 +28,7 @@ import com.animesh.fitnesstracker.util.Dates
 import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 /** Everything the Health tab needs for one day, as one observable bundle. */
@@ -55,7 +58,12 @@ data class NightInputs(
     val hrvValues: List<HrvValue>
 )
 
-class HealthRepository(private val db: AppDatabase, private val zone: ZoneId = ZoneId.systemDefault()) {
+class HealthRepository(
+    private val db: AppDatabase,
+    private val zone: ZoneId = ZoneId.systemDefault(),
+    /** Current Unix seconds, for prorating today's resting calories; tests pin it. */
+    private val now: () -> Long = { System.currentTimeMillis() / 1000 }
+) {
     private val dao get() = db.healthDao()
 
     private fun dayStart(epochDay: Long) = Dates.dayStartSeconds(epochDay, zone)
@@ -151,7 +159,45 @@ class HealthRepository(private val db: AppDatabase, private val zone: ZoneId = Z
         TrendMetric.INTENSITY_MINUTES -> observeDayIntensityBetween(fromDay, toDay).map { rows ->
             rows.associate { it.epochDay to (it.moderate + 2 * it.vigorous).toDouble() }
         }
+        TrendMetric.FLOORS -> observeDayTotalsBetween(fromDay, toDay).map { rows -> rows.associate { it.epochDay to Floors.of(it.ascentM).toDouble() } }
+        TrendMetric.CALORIES -> observeTotalCalories(fromDay, toDay)
+        TrendMetric.SLEEP_NEED -> observeSleepNightsBetween(fromDay, toDay).map { rows ->
+            rows.associate { it.epochDay to (if (it.asleepSeconds > 0) it.asleepSeconds else it.durationSeconds) / 60.0 }
+        }
     }
+
+    /** The second series of a metric (active calories, the night's sleep need); empty for metrics without one. */
+    fun observeTrendSecondary(metric: TrendMetric, fromDay: Long, toDay: Long): Flow<Map<Long, Double>> = when (metric) {
+        TrendMetric.CALORIES -> observeDayTotalsBetween(fromDay, toDay).map { rows -> rows.associate { it.epochDay to it.activeKcal.toDouble() } }
+        TrendMetric.SLEEP_NEED -> observeSleepNightsBetween(fromDay, toDay).map { rows ->
+            rows.mapNotNull { n -> n.sleepNeedMin?.let { n.epochDay to it.toDouble() } }.toMap()
+        }
+        else -> flowOf(emptyMap())
+    }
+
+    /**
+     * Resting plus active calories per day. The resting side is the watch's resting metabolic rate
+     * for the day, or the latest earlier one (looked up to sixty days back), whole for finished
+     * days and prorated for the day that is still running. Days after today are left out.
+     */
+    private fun observeTotalCalories(fromDay: Long, toDay: Long): Flow<Map<Long, Double>> =
+        combine(observeDayTotalsBetween(fromDay, toDay), observeMetrics(MetricType.RMR, fromDay - RMR_LOOKBACK_DAYS, toDay)) { totals, rmrRows ->
+            val rmrByDay = rmrRows.associate { it.epochDay to it.value.toInt() }
+            val nowSeconds = now()
+            val today = Dates.epochDayOfSeconds(nowSeconds, zone)
+            var carried: Int? = rmrRows.filter { it.epochDay < fromDay }.maxByOrNull { it.epochDay }?.value?.toInt()
+            val activeByDay = totals.associate { it.epochDay to it.activeKcal }
+            val result = LinkedHashMap<Long, Double>()
+            for (day in fromDay..toDay) {
+                rmrByDay[day]?.let { carried = it }
+                if (day > today) continue
+                val active = activeByDay[day]
+                val resting = DaySummary.restingCalories(carried, dayStart(day), dayEnd(day), nowSeconds)
+                if (active == null && resting == null) continue
+                result[day] = ((resting ?: 0) + (active ?: 0)).toDouble()
+            }
+            result
+        }
 
     private fun metricValues(type: MetricType, fromDay: Long, toDay: Long): Flow<Map<Long, Double>> =
         observeMetrics(type, fromDay, toDay).map { rows -> rows.associate { it.epochDay to it.value } }
@@ -159,6 +205,13 @@ class HealthRepository(private val db: AppDatabase, private val zone: ZoneId = Z
     /** Buckets ready for the Trends chart, for the period ending today. */
     fun observeTrend(metric: TrendMetric, period: TrendPeriod, today: Long = Dates.todayEpochDay()): Flow<TrendResult> {
         val range = Trends.dayRange(period, today)
-        return observeTrendValues(metric, range.first, range.last).map { Trends.bucket(metric, it, period, today) }
+        return combine(observeTrendValues(metric, range.first, range.last), observeTrendSecondary(metric, range.first, range.last)) { values, secondary ->
+            Trends.bucket(metric, values, period, today, secondary)
+        }
+    }
+
+    companion object {
+        /** How far back the resting metabolic rate is looked up for the calories trend. */
+        const val RMR_LOOKBACK_DAYS = 60L
     }
 }
