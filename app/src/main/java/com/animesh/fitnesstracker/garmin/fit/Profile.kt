@@ -61,6 +61,7 @@ internal object Mesg {
     const val MAX_MET_DATA = 229
     const val SPO2_DATA = 269
     const val SLEEP_LEVEL = 275
+    const val MONITORING_ALTITUDE = 279
     const val EXERCISE_TITLE = 264
     const val METRIC_RECOVERY = 284
     const val RESPIRATION_RATE = 297
@@ -72,8 +73,12 @@ internal object Mesg {
     const val HRV_VALUE = 371
     const val TRAINING_LOAD = 378
     const val SLEEP_RESTLESS_MOMENTS = 382
+    const val DAILY_SLEEP = 384
+    const val SKIN_TEMP_OVERNIGHT = 398
     const val HILL_SCORE = 402
     const val ENDURANCE_SCORE = 403
+    const val BODY_BATTERY_EVENT = 407
+    const val SLEEP_DEMAND = 410
     const val NAP = 412
 }
 
@@ -319,6 +324,7 @@ internal object Profile {
             f(0, "reading_spo2", unit = PCT), f(1, "reading_confidence"), f(2, "mode"), ts()
         ),
         msg(Mesg.SLEEP_LEVEL, "sleep_level", f(0, "sleep_level"), ts()),
+        msg(Mesg.MONITORING_ALTITUDE, "monitoring_altitude", alt(0, "altitude"), ts()),
         msg(
             Mesg.METRIC_RECOVERY, "metric_recovery",
             f(0, "recovery_minutes", unit = MIN), ts(1, "recovery_start")
@@ -360,6 +366,23 @@ internal object Profile {
         msg(
             Mesg.SLEEP_RESTLESS_MOMENTS, "sleep_restless_moments",
             f(0, "sleep_start", unit = S), f(1, "restless_moments_count"), f(2, "durations")
+        ),
+        msg(
+            Mesg.DAILY_SLEEP, "daily_sleep",
+            f(2, "sleep_score"), f(3, "awake_duration", unit = S), local(8), ts(9, "sleep_start_time"),
+            f(10, "sleep_start_timezone_offset", unit = MIN), ts(11, "sleep_end_time"), f(12, "sleep_end_timezone_offset", unit = MIN),
+            f(14, "sleep_start_body_battery"), f(16, "sleep_end_body_battery"), f(22, "sleep_pressure"), f(24, "sleep_awake_duration"),
+            ts(), idx()
+        ),
+        // Only the local timestamp and a status flag have been seen so far; the deviation field waits for a watch with a baseline.
+        msg(Mesg.SKIN_TEMP_OVERNIGHT, "skin_temp_overnight", local(0), f(3, "status"), ts()),
+        msg(
+            Mesg.BODY_BATTERY_EVENT, "body_battery_event",
+            f(0, "kind"), f(1, "duration", unit = MIN), f(2, "delta"), f(3, "unknown_3"), f(6, "unknown_6"), ts(7, "end_time"), ts()
+        ),
+        msg(
+            Mesg.SLEEP_DEMAND, "sleep_demand",
+            f(0, "normal", unit = MIN), f(1, "demand", unit = MIN), ts(7, "start"), ts(8, "end"), ts()
         ),
         msg(
             Mesg.HILL_SCORE, "hill_score",

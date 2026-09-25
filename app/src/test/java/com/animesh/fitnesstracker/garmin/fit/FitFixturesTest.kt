@@ -123,6 +123,19 @@ class FitFixturesTest {
         assertEquals(SyntheticFixtures.RESTING_METABOLIC_RATE, d.monitoringInfo.single().restingMetabolicRate)
         assertEquals(listOf(EventRec(SyntheticFixtures.SLEEP_END, 74, 1, null)), d.events)
         assertEquals(SyntheticFixtures.SLEEP_START, d.raw.first { it.globalMessageNumber == Mesg.EVENT }.fields[15])
+        assertTrue("altitude every other minute", d.altitude.size > 500)
+        assertTrue(d.altitude.all { it.altitudeM in 79.0..80.0 })
+        val events = d.bodyBatteryEvents
+        assertEquals("the opening unmeasured stretch, the night's charge and the walk's drain", 3, events.size)
+        val night = events.first { it.kind == 4 }
+        assertEquals(SyntheticFixtures.SLEEP_START, night.timestamp)
+        assertEquals(SyntheticFixtures.SLEEP_END, night.endTimestamp)
+        assertEquals(((SyntheticFixtures.SLEEP_END - SyntheticFixtures.SLEEP_START) / 60).toInt(), night.durationMinutes)
+        assertEquals(SyntheticFixtures.SLEEP_BATTERY_GAIN, night.delta)
+        val walk = events.first { it.kind == 0 }
+        assertEquals(-9, walk.delta)
+        assertEquals(55, walk.durationMinutes)
+        assertEquals(walk.timestamp + 55 * 60, walk.endTimestamp)
         printSummary("MONITOR_M9GL2255.fit", d)
     }
 
@@ -201,21 +214,34 @@ class FitFixturesTest {
         assertEquals(0, readiness.level)
         assertNull("readiness itself is the invalid sentinel", readiness.readiness)
         assertNull(decoded.getValue("METRICS_G9FM3213.fit").trainingReadiness.single().sleepScore)
-        val dailySleep = withRecovery.raw.first { it.globalMessageNumber == 384 }
-        assertEquals(SyntheticFixtures.SLEEP_SCORE.toLong(), dailySleep.fields[2])
-        assertEquals(SyntheticFixtures.TZ_OFFSET_MINUTES.toLong(), dailySleep.fields[10])
-        assertEquals(480L, withRecovery.raw.first { it.globalMessageNumber == 410 }.fields[0])
+        val dailySleepRaw = withRecovery.raw.first { it.globalMessageNumber == Mesg.DAILY_SLEEP }
+        assertEquals(SyntheticFixtures.SLEEP_SCORE.toLong(), dailySleepRaw.fields[2])
+        assertEquals(SyntheticFixtures.TZ_OFFSET_MINUTES.toLong(), dailySleepRaw.fields[10])
+        val dailySleep = withRecovery.dailySleep.single()
+        assertEquals(SyntheticFixtures.SLEEP_SCORE, dailySleep.score)
+        assertEquals(960, dailySleep.awakeSeconds)
+        assertEquals(SyntheticFixtures.SLEEP_BATTERY_START, dailySleep.bodyBatteryStart)
+        assertEquals(SyntheticFixtures.SLEEP_BATTERY_START + SyntheticFixtures.SLEEP_BATTERY_GAIN, dailySleep.bodyBatteryEnd)
+        assertEquals(dailySleep.endTimestamp!! - dailySleep.startTimestamp!!, 7 * 3600L + 27 * 60)
+        assertEquals(SyntheticFixtures.TZ_OFFSET_MINUTES, dailySleep.endTzOffsetMinutes)
+        assertEquals(480L, withRecovery.raw.first { it.globalMessageNumber == Mesg.SLEEP_DEMAND }.fields[0])
+        val demand = withRecovery.sleepDemand.single()
+        assertEquals(480, demand.normalMinutes)
+        assertEquals("Sleep Coach asks for forty minutes more than usual", 520, demand.demandMinutes)
+        assertTrue("files without a night carry no daily sleep record", decoded.getValue("METRICS_G9FM3213.fit").dailySleep.isEmpty())
         val anyMetric = decoded.values.any { it.maxMet.any { m -> m.vo2Max != null && m.vo2Max in 20.0..80.0 } || it.trainingReadiness.isNotEmpty() || it.trainingLoad.isNotEmpty() || it.recovery.isNotEmpty() }
         assertTrue(anyMetric)
     }
 
     @Test
-    fun skinTemperatureFixtureIsUnknownButDecodes() {
+    fun skinTemperatureFixtureCarriesOnlyAStatusFlag() {
         val d = FitFixtures.decode("SKINTEMP_G9G80127.fit")
         assertEquals(FitFileType.SKIN_TEMP, d.fileId.type)
-        val skin = d.raw.filter { it.globalMessageNumber == 398 }
+        val skin = d.raw.filter { it.globalMessageNumber == Mesg.SKIN_TEMP_OVERNIGHT }
         assertEquals(2, skin.size)
         assertEquals("0xFFFFFFFF sentinels in fields 1, 2 and 4 are dropped", setOf(253, 0, 3), skin.first().fields.keys)
+        assertEquals("field 0 is the wall clock of the record, converted like any local timestamp", SyntheticFixtures.SLEEP_END - 7 * 3600, skin.first().fields[0])
+        assertEquals(1L, skin.first().fields[3])
         assertTrue(d.unknownMessageCount >= 1)
         printSummary("SKINTEMP_G9G80127.fit", d)
     }

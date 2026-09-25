@@ -22,7 +22,7 @@ class FitGoldenTest {
         )
         assertEquals(expected, counts)
         assertEquals(44, decoded.raw.size)
-        assertEquals(17, decoded.unknownMessageCount)
+        assertEquals("24 twice, 188 twice, 233 twice, 355, 408, 484, 23 and 49", 11, decoded.unknownMessageCount)
         assertEquals("stress_level field 4 in each of the four stress records", 4, decoded.unknownFieldCount)
     }
 
@@ -104,8 +104,13 @@ class FitGoldenTest {
         assertEquals(mapOf<Int, Any?>(0 to 618L), decoded.raw.first { it.globalMessageNumber == 49 }.fields)
         val unknown233 = decoded.raw.first { it.globalMessageNumber == 233 }
         assertEquals(mapOf<Int, Any?>(2 to listOf(10L, 0L, 0L, 200L)), unknown233.fields)
-        val unknown279 = decoded.raw.first { it.globalMessageNumber == 279 }
-        assertEquals(mapOf<Int, Any?>(253 to t0 + 120, 0 to 2897L), unknown279.fields)
+        val altitude = decoded.raw.first { it.globalMessageNumber == Mesg.MONITORING_ALTITUDE }
+        assertEquals(setOf(253, 0), altitude.fields.keys)
+        assertEquals(t0 + 120, altitude.fields[253])
+        assertEquals("2897 raw with the enhanced_altitude scale", 79.4, altitude.fields[0] as Double, 1e-9)
+        assertEquals(listOf(MonitoringAltitudeRec(t0 + 120, 79.4)).map { it.timestamp }, decoded.altitude.take(1).map { it.timestamp })
+        assertEquals(5, decoded.altitude.size)
+        assertEquals(listOf(BodyBatteryEventRec(t0, 3, 12, 0, t0 + 720, 3L, 2L)), decoded.bodyBatteryEvents)
         val unknown24 = decoded.raw.first { it.globalMessageNumber == 24 }
         assertEquals(27, (unknown24.fields[2] as List<*>).size)
         assertEquals(mapOf<Int, Any?>(253 to t0, 0 to 3L), decoded.raw.first { it.globalMessageNumber == 188 }.fields)

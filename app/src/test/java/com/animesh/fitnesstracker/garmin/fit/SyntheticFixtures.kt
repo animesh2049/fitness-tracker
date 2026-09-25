@@ -45,6 +45,9 @@ object SyntheticFixtures {
     const val SLEEP_SCORE = 83
     const val WALKING_STEPS = 7325L
     const val SPO2_PERCENT = 97
+    /** Body Battery at sleep start and the overnight gain, as the daily sleep and event records tell it. */
+    const val SLEEP_BATTERY_START = 41
+    const val SLEEP_BATTERY_GAIN = 38
 
     private const val MINUTE = 60L
     private const val WALKING = 6
@@ -292,6 +295,8 @@ object SyntheticFixtures {
             if (withSpo2 && at == day.midnight + hm(3, 10)) {
                 w.write(Mesg.SPO2_DATA, ts(at), FitField.u8(0, SPO2_PERCENT), FitField.u8(1, 3), FitField.enum(2, 3))
             }
+            if (withSpo2 && at == SLEEP_END) bodyBatteryEvent(w, start = SLEEP_START, end = SLEEP_END, kind = 4, delta = SLEEP_BATTERY_GAIN)
+            if (withSpo2 && i == 1060) bodyBatteryEvent(w, start = at - 55 * MINUTE, end = at, kind = 0, delta = -9)
         }
         w.write(188, ts(end), FitField.u8(0, 4))
         return w.toByteArray()
@@ -305,11 +310,14 @@ object SyntheticFixtures {
         )
     }
 
-    /** The unknown messages a monitoring file opens with: 24 (twice), 188, 407, 408, 355 and 484. */
+    /** The messages a monitoring file opens with: unknown 24 (twice), 188, 408, 355 and 484, plus a 12 minute unmeasured Body Battery event (407). */
     private fun unknownBlock(w: FitWriter, at: Long, rnd: Random) {
         repeat(2) { n -> w.write(24, bytes(2, List(27) { i -> if (i == 0) n + 1 else (i * 7 + n) % 256 })) }
         w.write(188, ts(at), FitField.u8(0, 3))
-        w.write(407, ts(at), FitField.u16(0, 3), FitField.u16(1, 12))
+        w.write(
+            Mesg.BODY_BATTERY_EVENT,
+            ts(at), FitField.u8(0, 3), FitField.u16(1, 12), FitField.sint8(2, 0), FitField.u8(3, 3), FitField.u8(6, 2), FitField.u32(7, garmin(at + 12 * MINUTE))
+        )
         w.write(408, ts(at), FitField.u8(0, 1))
         w.write(355, ts(at), FitField.u32(0, 1234L + rnd.nextInt(0, 3)), FitField.u8(1, 2))
         w.write(484, ts(at), FitField.u16(0, 7), FitField.u16(1, 42))
@@ -343,7 +351,18 @@ object SyntheticFixtures {
         w.write(Mesg.RESPIRATION_RATE, ts(at), FitField.sint16(0, raw))
     }
 
-    private fun unknown279(w: FitWriter, at: Long) = w.write(279, ts(at), FitField.u16(0, 2897))
+    /** The watch's altitude record: 2897 raw is 79.4 m with the enhanced_altitude scale (value / 5 - 500). */
+    private fun unknown279(w: FitWriter, at: Long) = w.write(Mesg.MONITORING_ALTITUDE, ts(at), FitField.u16(0, 2897))
+
+    /** A Body Battery event as the watch writes it: the record timestamp is the start, field 7 the end. */
+    private fun bodyBatteryEvent(w: FitWriter, start: Long, end: Long, kind: Int, delta: Int) {
+        val minutes = ((end - start) / MINUTE).toInt()
+        w.write(
+            Mesg.BODY_BATTERY_EVENT,
+            ts(start), FitField.u8(0, kind), FitField.u16(1, minutes), FitField.sint8(2, delta), FitField.u8(3, if (kind == 0) 28 else 0),
+            FitField.u8(6, if (kind == 0) 35 else 0), FitField.u32(7, garmin(end))
+        )
+    }
 
     private fun unknown233(w: FitWriter, last: Int) = w.write(233, bytes(2, listOf(10, 0, 0, last)))
 
@@ -402,8 +421,8 @@ object SyntheticFixtures {
         fileId(w, type = 73, created = created, number = 1)
         fileCreator(w)
         deviceInfo(w, created)
-        w.write(398, ts(SLEEP_END), FitField.sint16(0, -35), FitField.u32(1, null), FitField.u32(2, null), FitField.u8(3, 2), FitField.u32(4, null))
-        w.write(398, ts(created), FitField.sint16(0, -20), FitField.u32(1, null), FitField.u32(2, null), FitField.u8(3, 2), FitField.u32(4, null))
+        w.write(Mesg.SKIN_TEMP_OVERNIGHT, ts(SLEEP_END), FitField.u32(0, garmin(SLEEP_END) + TZ_OFFSET_SECONDS), FitField.u32(1, null), FitField.u32(2, null), FitField.u8(3, 1), FitField.u32(4, null))
+        w.write(Mesg.SKIN_TEMP_OVERNIGHT, ts(created), FitField.u32(0, garmin(created) + TZ_OFFSET_SECONDS), FitField.u32(1, null), FitField.u32(2, null), FitField.u8(3, 1), FitField.u32(4, null))
         return w.toByteArray()
     }
 
@@ -445,12 +464,20 @@ object SyntheticFixtures {
             val nightEnd = created - hm(0, 8)
             val nightStart = nightEnd - hm(7, 27)
             w.write(
-                384,
-                ts(created), FitField.u32(0, garmin(nightStart)), FitField.u32(1, garmin(nightEnd)), FitField.u8(2, sleepScore),
-                FitField.sint16(10, TZ_OFFSET_MINUTES), FitField.sint16(12, TZ_OFFSET_MINUTES)
+                Mesg.DAILY_SLEEP,
+                ts(created), FitField.u8(0, 54), FitField.u8(1, 100), FitField.u8(2, sleepScore), FitField.u16(3, 960),
+                FitField.u32(8, garmin(nightEnd) + TZ_OFFSET_SECONDS), FitField.u32(9, garmin(nightStart)), FitField.sint16(10, TZ_OFFSET_MINUTES),
+                FitField.u32(11, garmin(nightEnd)), FitField.sint16(12, TZ_OFFSET_MINUTES), FitField.u8(14, SLEEP_BATTERY_START),
+                FitField.u8(16, SLEEP_BATTERY_START + SLEEP_BATTERY_GAIN), FitField.sint8(22, -15), FitField.u8(24, 30)
             )
         }
-        if (sleepMinutes != null) w.write(410, ts(created), FitField.u16(0, sleepMinutes))
+        if (sleepMinutes != null) {
+            w.write(
+                Mesg.SLEEP_DEMAND,
+                ts(created), FitField.u16(0, sleepMinutes), FitField.u16(1, sleepMinutes + (number % 3) * 20), FitField.u8(2, 3), FitField.u8(3, 0),
+                FitField.u8(4, 3), FitField.u8(5, 3), FitField.u8(6, 0)
+            )
+        }
         return w.toByteArray()
     }
 

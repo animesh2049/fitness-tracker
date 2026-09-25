@@ -67,6 +67,10 @@ private class TypedRecords {
     private val sleepStats = ArrayList<SleepStatsRec>()
     private val restlessMoments = ArrayList<RestlessMomentsRec>()
     private val naps = ArrayList<NapRec>()
+    private val dailySleep = ArrayList<DailySleepRec>()
+    private val sleepDemand = ArrayList<SleepDemandRec>()
+    private val bodyBatteryEvents = ArrayList<BodyBatteryEventRec>()
+    private val altitude = ArrayList<MonitoringAltitudeRec>()
     private val hrvSummary = ArrayList<HrvSummaryRec>()
     private val hrvValues = ArrayList<HrvValueRec>()
     private val trainingLoad = ArrayList<TrainingLoadRec>()
@@ -124,8 +128,25 @@ private class TypedRecords {
             Mesg.MONITORING_INFO -> f.long(253)?.let { monitoringInfo += MonitoringInfoRec(it, f.int(5)) }
             Mesg.DEVICE_STATUS -> f.long(253)?.let { deviceStatus += DeviceStatusRec(it, f.int(2)) }
             Mesg.PHYSIOLOGICAL_METRICS -> physiologicalMetrics += PhysiologicalMetricsRec(
-                f.long(253), f.double(4), f.double(20), f.double(7), f.int(9), f.int(14), f.int(63)
+                timestamp = f.long(253), aerobicEffect = f.double(4), anaerobicEffect = f.double(20), metMax = f.double(7),
+                recoveryTimeMinutes = f.int(9), lactateThresholdHeartRate = f.int(14), averageHeartRate = f.int(63),
+                endingPerformanceCondition = f.int(17), primaryBenefit = f.int(41)
             )
+            Mesg.MONITORING_ALTITUDE -> {
+                val ts = f.long(253)
+                val metres = f.double(0)
+                if (ts != null && metres != null) altitude += MonitoringAltitudeRec(ts, metres)
+            }
+            Mesg.BODY_BATTERY_EVENT -> f.long(253)?.let {
+                bodyBatteryEvents += BodyBatteryEventRec(it, f.int(0), f.int(1), f.int(2), f.long(7), f.long(3), f.long(6))
+            }
+            Mesg.DAILY_SLEEP -> f.long(253)?.let {
+                dailySleep += DailySleepRec(
+                    timestamp = it, score = f.int(2), awakeSeconds = f.int(3), startTimestamp = f.long(9), endTimestamp = f.long(11),
+                    startTzOffsetMinutes = f.int(10), endTzOffsetMinutes = f.int(12), bodyBatteryStart = f.int(14), bodyBatteryEnd = f.int(16)
+                )
+            }
+            Mesg.SLEEP_DEMAND -> f.long(253)?.let { sleepDemand += SleepDemandRec(it, f.int(0), f.int(1)) }
             Mesg.MONITORING_HR_DATA -> restingHr += RestingHrRec(f.long(253), f.int(0), f.int(1))
             Mesg.TIME_IN_ZONE -> timeInZone += TimeInZoneRec(f.long(253), f.int(0), f.int(1), f.doubles(2), f.ints(6))
             Mesg.STRESS_LEVEL -> (f.long(1) ?: f.long(253))?.let { stress += StressRec(it, f.int(0), f.int(3), f.int(2)) }
@@ -154,7 +175,8 @@ private class TypedRecords {
             }
             Mesg.RACE_PREDICTION -> f.long(253)?.let { racePredictions += RacePredictionRec(it, f.int(1), f.int(2), f.int(3), f.int(4)) }
             Mesg.SLEEP_ASSESSMENT -> sleepStats += SleepStatsRec(
-                timestamp = f.long(253), overallSleepScore = f.int(6), deepSleepScore = f.int(3), lightSleepScore = f.int(5),
+                timestamp = f.long(253), overallSleepScore = f.int(6), combinedAwakeScore = f.int(0), awakeTimeScore = f.int(1),
+                awakeningsCountScore = f.int(2), deepSleepScore = f.int(3), lightSleepScore = f.int(5),
                 remSleepScore = f.int(9), sleepDurationScore = f.int(4), sleepQualityScore = f.int(7), sleepRecoveryScore = f.int(8),
                 sleepRestlessnessScore = f.int(10), awakeningsCount = f.int(11), interruptionsScore = f.int(14),
                 averageStressDuringSleep = f.double(15)
@@ -262,7 +284,7 @@ private class TypedRecords {
         fileId = fileId ?: FileIdRec(typeNum = null, timeCreated = null),
         monitoring = monitoring, monitoringInfo = monitoringInfo, stress = stress, restingHr = restingHr, spo2 = spo2,
         respiration = respiration, events = events, sleepStages = sleepStages, sleepStats = sleepStats, restlessMoments = restlessMoments,
-        naps = naps, hrvSummary = hrvSummary, hrvValues = hrvValues, trainingLoad = trainingLoad, racePredictions = racePredictions,
+        naps = naps, dailySleep = dailySleep, sleepDemand = sleepDemand, bodyBatteryEvents = bodyBatteryEvents, altitude = altitude, hrvSummary = hrvSummary, hrvValues = hrvValues, trainingLoad = trainingLoad, racePredictions = racePredictions,
         hillScores = hillScores, enduranceScores = enduranceScores, trainingReadiness = trainingReadiness,
         functionalMetrics = functionalMetrics, recovery = recovery, maxMet = maxMet, deviceStatus = deviceStatus, sessions = sessions,
         laps = laps, records = records, timeInZone = timeInZone, physiologicalMetrics = physiologicalMetrics, userProfile = userProfile,

@@ -9,8 +9,8 @@ import org.junit.Test
 /** Sanity checks on the hand-maintained profile table, the CRC and the diagnostics dump. */
 class ProfileAndDumpTest {
     private val contractMessages = listOf(
-        0, 1, 3, 12, 18, 19, 20, 21, 26, 34, 55, 103, 104, 140, 211, 216, 227, 229, 269, 275, 284, 297, 339, 346, 356,
-        369, 370, 371, 378, 382, 402, 403, 412
+        0, 1, 3, 12, 18, 19, 20, 21, 26, 34, 55, 103, 104, 140, 211, 216, 227, 229, 269, 275, 279, 284, 297, 339, 346, 356,
+        369, 370, 371, 378, 382, 384, 398, 402, 403, 407, 410, 412
     )
 
     @Test
@@ -67,7 +67,9 @@ class ProfileAndDumpTest {
         assertTrue(summary.contains("55 monitoring"))
         assertTrue(summary.contains("27:heart_rate="))
         assertTrue(summary.contains("timestamps: first=1789618800"))
-        assertTrue(summary.contains("unknown messages: 17 records"))
+        assertTrue(summary.contains("unknown messages: 11 records"))
+        assertTrue(summary.contains("279 monitoring_altitude"))
+        assertTrue(summary.contains("407 body_battery_event"))
         assertTrue(summary.lines().any { it.trim().startsWith("484 ?") })
     }
 }

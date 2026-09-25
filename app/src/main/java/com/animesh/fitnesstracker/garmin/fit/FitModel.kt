@@ -22,6 +22,10 @@ data class DecodedFit(
     val sleepStats: List<SleepStatsRec> = emptyList(),
     val restlessMoments: List<RestlessMomentsRec> = emptyList(),
     val naps: List<NapRec> = emptyList(),
+    val dailySleep: List<DailySleepRec> = emptyList(),
+    val sleepDemand: List<SleepDemandRec> = emptyList(),
+    val bodyBatteryEvents: List<BodyBatteryEventRec> = emptyList(),
+    val altitude: List<MonitoringAltitudeRec> = emptyList(),
     val hrvSummary: List<HrvSummaryRec> = emptyList(),
     val hrvValues: List<HrvValueRec> = emptyList(),
     val trainingLoad: List<TrainingLoadRec> = emptyList(),
@@ -96,6 +100,26 @@ data class MonitoringRec(
 /** Global message 103. */
 data class MonitoringInfoRec(val timestamp: Long, val restingMetabolicRate: Int?)
 
+/** Global message 279: the barometric altitude the watch logs every other minute, in metres. */
+data class MonitoringAltitudeRec(val timestamp: Long, val altitudeM: Double)
+
+/**
+ * Global message 407, one Body Battery event as the watch's Body Battery glance lists them
+ * (charged by sleep, drained by a workout, and so on). [timestamp] is the event's start and
+ * [endTimestamp] its end; [delta] is the signed Body Battery change over it. The field meaning
+ * was inferred from a Forerunner 570's own records (research notes, 2026-09-24): kind 4 sleep,
+ * 0 activity, 3 an unmeasured stretch; confirm against the watch before labelling other kinds.
+ */
+data class BodyBatteryEventRec(
+    val timestamp: Long,
+    val kind: Int?,
+    val durationMinutes: Int?,
+    val delta: Int?,
+    val endTimestamp: Long?,
+    val unknown3: Long? = null,
+    val unknown6: Long? = null
+)
+
 /** Global message 227. [stress] is -1 or -2 when the watch could not measure; [bodyBattery] 0..100. */
 data class StressRec(val timestamp: Long, val stress: Int?, val bodyBattery: Int?, val averageStress: Int? = null)
 
@@ -118,6 +142,9 @@ data class SleepStageRec(val timestamp: Long, val stage: Int)
 data class SleepStatsRec(
     val timestamp: Long?,
     val overallSleepScore: Int?,
+    val combinedAwakeScore: Int? = null,
+    val awakeTimeScore: Int? = null,
+    val awakeningsCountScore: Int? = null,
     val deepSleepScore: Int? = null,
     val lightSleepScore: Int? = null,
     val remSleepScore: Int? = null,
@@ -135,6 +162,25 @@ data class RestlessMomentsRec(val timestamp: Long?, val count: Int)
 
 /** Global message 412. Unix seconds. */
 data class NapRec(val startTimestamp: Long, val endTimestamp: Long)
+
+/**
+ * Global message 384, the watch's daily sleep summary in the metrics file. Carries what the sleep
+ * file does not: Body Battery at sleep start and end, and the night's bounds with their zone offsets.
+ */
+data class DailySleepRec(
+    val timestamp: Long,
+    val score: Int?,
+    val awakeSeconds: Int?,
+    val startTimestamp: Long?,
+    val endTimestamp: Long?,
+    val startTzOffsetMinutes: Int?,
+    val endTzOffsetMinutes: Int?,
+    val bodyBatteryStart: Int?,
+    val bodyBatteryEnd: Int?
+)
+
+/** Global message 410, Sleep Coach: the usual need and tonight's demanded sleep, both in minutes. */
+data class SleepDemandRec(val timestamp: Long, val normalMinutes: Int?, val demandMinutes: Int?)
 
 /** Global message 370. Values in milliseconds. Status 0 none, 1 poor, 2 low, 3 unbalanced, 4 balanced. */
 data class HrvSummaryRec(
@@ -257,7 +303,10 @@ data class TimeInZoneRec(
     val hrZoneHighBoundary: List<Int>
 )
 
-/** Global message 140. */
+/**
+ * Global message 140. [endingPerformanceCondition] is the signed deviation from the user's
+ * baseline at the end of the activity; [primaryBenefit] is the watch's training effect label code.
+ */
 data class PhysiologicalMetricsRec(
     val timestamp: Long?,
     val aerobicEffect: Double?,
@@ -265,7 +314,9 @@ data class PhysiologicalMetricsRec(
     val metMax: Double?,
     val recoveryTimeMinutes: Int?,
     val lactateThresholdHeartRate: Int?,
-    val averageHeartRate: Int?
+    val averageHeartRate: Int?,
+    val endingPerformanceCondition: Int? = null,
+    val primaryBenefit: Int? = null
 )
 
 /** Global message 3. */
