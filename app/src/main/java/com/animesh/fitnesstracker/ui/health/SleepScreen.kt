@@ -89,6 +89,22 @@ fun SleepScreen(epochDay: Long, onBack: () -> Unit, onOpenTrends: () -> Unit) {
                         }
                     }
                 }
+                if (state.breakdown.isNotEmpty()) {
+                    item("breakdown") {
+                        AppCard(padding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp)) {
+                            Column {
+                                CardHeader("Score breakdown", state.breakdownCaption, Modifier.padding(bottom = 6.dp))
+                                state.breakdown.forEachIndexed { i, row ->
+                                    BreakdownRowView(row)
+                                    if (i < state.breakdown.lastIndex) HorizontalDivider(color = Tokens.Surface2, thickness = 1.dp)
+                                }
+                            }
+                        }
+                    }
+                }
+                state.need?.let { need ->
+                    item("need") { SleepNeedCard(need) }
+                }
                 item("tiles") {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         state.tiles.chunked(3).forEach { rowTiles ->
@@ -102,12 +118,57 @@ fun SleepScreen(epochDay: Long, onBack: () -> Unit, onOpenTrends: () -> Unit) {
                 item("note") {
                     NoteCard(
                         "From the watch",
-                        "Stages, score and HRV status are computed on the Forerunner and read from its sleep and HRV files. The app does not re-score sleep."
+                        "Stages, scores, sleep need and HRV status are computed on the Forerunner and read from its sleep, metrics and HRV files. The app does not re-score sleep."
                     )
                 }
             }
             item("trends") { GhostButton("Sleep trends", onOpenTrends, Modifier.fillMaxWidth()) }
         }
+    }
+}
+
+@Composable
+private fun BreakdownRowView(row: BreakdownRow) {
+    Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.width(96.dp)) {
+            Text(row.name, style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp), color = Tokens.Text, maxLines = 1)
+            if (row.detail != null) Text(row.detail, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp, fontWeight = FontWeight.Normal), color = Tokens.Dim, maxLines = 1)
+        }
+        ProgressBar(row.fraction, Modifier.weight(1f), color = row.color)
+        Text(row.score, style = MonoNumber.copy(fontWeight = FontWeight.SemiBold), color = Tokens.Text, textAlign = TextAlign.End, modifier = Modifier.width(34.dp))
+        Text(row.band, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp, fontWeight = FontWeight.Normal), color = Tokens.Muted, textAlign = TextAlign.End, modifier = Modifier.width(60.dp), maxLines = 1)
+    }
+}
+
+@Composable
+private fun SleepNeedCard(need: NeedUi) {
+    AppCard(padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            CardHeader("Sleep need", "Sleep Coach")
+            Row(Modifier.fillMaxWidth()) {
+                NeedCell("Need", need.need, Tokens.Text, Modifier.weight(1f))
+                NeedCell("Slept", need.slept, Tokens.Text, Modifier.weight(1f))
+                NeedCell(if (need.met) "Need" else "Short by", if (need.met) "Met" else need.shortBy, if (need.met) Tokens.Accent else Tokens.Warning, Modifier.weight(1f))
+            }
+            Box(Modifier.fillMaxWidth().height(12.dp), contentAlignment = Alignment.CenterStart) {
+                ProgressBar(need.fraction, Modifier.fillMaxWidth(), color = if (need.met) Tokens.Accent else HealthColors.BarDim)
+                // The need marker sits at the right edge: the bar is the night as a share of the need.
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                    Box(Modifier.width(2.dp).height(12.dp).background(Tokens.Text))
+                }
+            }
+            if (need.baselineLine != null) {
+                Text(need.baselineLine, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 17.sp), color = Tokens.Muted)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NeedCell(label: String, value: String, color: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Tokens.Muted)
+        Text(value, style = MonoTile, color = color, maxLines = 1)
     }
 }
 

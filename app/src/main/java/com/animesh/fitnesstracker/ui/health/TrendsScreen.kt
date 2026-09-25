@@ -81,7 +81,9 @@ fun TrendsScreen(onBack: () -> Unit) {
                             min = state.min,
                             max = state.max,
                             gridLabels = state.gridLabels,
-                            bubbleText = state.bubble
+                            bubbleText = state.bubble,
+                            secondary = state.secondary,
+                            secondaryMode = state.secondaryMode
                         )
                     }
                 }

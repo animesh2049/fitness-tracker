@@ -17,6 +17,7 @@ fun NavGraphBuilder.healthGraph(navController: NavHostController) {
         HealthTodayScreen(
             onOpenWatch = { navController.navigate(HealthRoutes.WATCH) },
             onOpenSleep = { navController.navigate(HealthRoutes.sleep(it)) },
+            onOpenBodyBattery = { navController.navigate(HealthRoutes.bodyBattery(it)) },
             onOpenTrends = { navController.navigate(HealthRoutes.TRENDS) },
             onOpenActivities = { navController.navigate(HealthRoutes.ACTIVITIES) },
             onOpenActivity = { navController.navigate(HealthRoutes.activity(it)) }
@@ -25,6 +26,14 @@ fun NavGraphBuilder.healthGraph(navController: NavHostController) {
     composable(HealthRoutes.SLEEP, arguments = listOf(navArgument("epochDay") { type = NavType.LongType })) { entry ->
         val day = entry.arguments?.getLong("epochDay") ?: return@composable
         SleepScreen(
+            epochDay = day,
+            onBack = { navController.popBackStack() },
+            onOpenTrends = { navController.navigate(HealthRoutes.TRENDS) }
+        )
+    }
+    composable(HealthRoutes.BODY_BATTERY, arguments = listOf(navArgument("epochDay") { type = NavType.LongType })) { entry ->
+        val day = entry.arguments?.getLong("epochDay") ?: return@composable
+        BodyBatteryDayScreen(
             epochDay = day,
             onBack = { navController.popBackStack() },
             onOpenTrends = { navController.navigate(HealthRoutes.TRENDS) }

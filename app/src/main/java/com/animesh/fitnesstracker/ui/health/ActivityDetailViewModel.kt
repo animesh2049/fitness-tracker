@@ -11,6 +11,7 @@ import com.animesh.fitnesstracker.data.model.Settings
 import com.animesh.fitnesstracker.di.AppContainer
 import com.animesh.fitnesstracker.domain.health.HrZones
 import com.animesh.fitnesstracker.domain.health.PaceFormat
+import com.animesh.fitnesstracker.domain.health.PrimaryBenefit
 import com.animesh.fitnesstracker.garmin.sync.WatchInfo
 import com.animesh.fitnesstracker.util.Dates
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -175,15 +176,19 @@ class ActivityDetailViewModel(private val c: AppContainer, private val activityI
             a.vo2max != null -> DetailTile("VO2 max", HealthFormat.oneDecimal(a.vo2max), "estimate after this activity")
             else -> DetailTile("Load", "n/a", "not in the file")
         }
-        return listOf(
+        val tiles = mutableListOf(
             DetailTile("Aerobic effect", aerobic?.let { HealthFormat.fixedOneDecimal(it) } ?: "n/a", aerobic?.let { HealthFormat.trainingEffectWord(it) } ?: "not in the file"),
-            DetailTile("Anaerobic effect", anaerobic?.let { HealthFormat.fixedOneDecimal(it) } ?: "n/a", anaerobic?.let { HealthFormat.trainingEffectWord(it) } ?: "not in the file"),
-            DetailTile(
-                "Recovery", recovery?.let { HealthFormat.hoursRounded(it) } ?: "n/a",
-                recovery?.let { "until ${HealthFormat.timeOfDay(a.endTimestamp + it * 60L)}" } ?: "not in the file"
-            ),
-            fourth
+            DetailTile("Anaerobic effect", anaerobic?.let { HealthFormat.fixedOneDecimal(it) } ?: "n/a", anaerobic?.let { HealthFormat.trainingEffectWord(it) } ?: "not in the file")
         )
+        // Version 0.5: what the watch wrote about the activity's benefit; both hide when it wrote nothing.
+        a.performanceCondition?.let { tiles += DetailTile("Performance", signedInt(it), "condition vs your baseline") }
+        PrimaryBenefit.label(a.primaryBenefit)?.let { tiles += DetailTile("Benefit", it, "the watch's label") }
+        tiles += DetailTile(
+            "Recovery", recovery?.let { HealthFormat.hoursRounded(it) } ?: "n/a",
+            recovery?.let { "until ${HealthFormat.timeOfDay(a.endTimestamp + it * 60L)}" } ?: "not in the file"
+        )
+        tiles += fourth
+        return tiles
     }
 
     private fun footer(a: Activity, watch: WatchInfo?): String = buildList {
@@ -195,6 +200,13 @@ class ActivityDetailViewModel(private val c: AppContainer, private val activityI
     companion object {
         private const val FULL_LAP_METRES = 950.0
         private const val POINT_GAP_SECONDS = 120L
+
+        /** "+3", "−2" (Unicode minus) or "0" for the performance condition. */
+        fun signedInt(value: Int): String = when {
+            value > 0 -> "+$value"
+            value < 0 -> "${HealthTodayViewModel.MINUS}${-value}"
+            else -> "0"
+        }
 
         /** Heart rate over elapsed time, x 0 at the start and 1 at the end, on a 60..170 scale widened when the data needs it. */
         fun heartRateSeries(a: Activity, points: List<ActivityPoint>): CurveSeries {

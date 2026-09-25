@@ -2,6 +2,8 @@ package com.animesh.fitnesstracker.ui.health
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,6 +53,7 @@ private const val PAIR_BODY = "The watch talks to this app over Bluetooth only. 
 fun HealthTodayScreen(
     onOpenWatch: () -> Unit,
     onOpenSleep: (Long) -> Unit,
+    onOpenBodyBattery: (Long) -> Unit,
     onOpenTrends: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenActivity: (Long) -> Unit
@@ -83,7 +86,7 @@ fun HealthTodayScreen(
                         nextEnabled = !state.isToday
                     )
                 })
-                HubBody(state, vm, onOpenWatch, onOpenSleep, onOpenTrends, onOpenActivities, onOpenActivity)
+                HubBody(state, vm, onOpenWatch, onOpenSleep, onOpenBodyBattery, onOpenTrends, onOpenActivities, onOpenActivity)
             }
         }
     }
@@ -95,6 +98,7 @@ private fun HubBody(
     vm: HealthTodayViewModel,
     onOpenWatch: () -> Unit,
     onOpenSleep: (Long) -> Unit,
+    onOpenBodyBattery: (Long) -> Unit,
     onOpenTrends: () -> Unit,
     onOpenActivities: () -> Unit,
     onOpenActivity: (Long) -> Unit
@@ -116,14 +120,19 @@ private fun HubBody(
             }
         }
         item("tiles") {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatTile("Steps", state.steps, state.stepsSub, Modifier.weight(1f), valueStyle = MonoTile)
-                StatTile("Distance", state.distance, "walking", Modifier.weight(1f), valueStyle = MonoTile)
-                StatTile("Active", state.kcal, "kcal", Modifier.weight(1f), valueStyle = MonoTile)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatTile("Steps", state.steps, state.stepsSub, Modifier.weight(1f), valueStyle = MonoTile)
+                    StatTile("Floors", state.floors, state.floorsSub, Modifier.weight(1f), valueStyle = MonoTile)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatTile("Distance", state.distance, "walking", Modifier.weight(1f), valueStyle = MonoTile)
+                    StatTile("Calories", state.kcal, state.kcalSub, Modifier.weight(1f), valueStyle = MonoTile)
+                }
             }
         }
         item("hr") { HeartRateCard(state) }
-        item("bb") { BodyBatteryCard(state) }
+        item("bb") { BodyBatteryCard(state, onClick = { onOpenBodyBattery(state.epochDay) }) }
         item("stress") { StressCard(state) }
         item("sleep") { SleepCard(state.sleep, onClick = { onOpenSleep(state.epochDay) }) }
         item("hrv") {
@@ -195,8 +204,8 @@ private fun HeartRateCard(state: HealthTodayState) {
 }
 
 @Composable
-private fun BodyBatteryCard(state: HealthTodayState) {
-    AppCard(padding = PaddingValues(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 10.dp)) {
+private fun BodyBatteryCard(state: HealthTodayState, onClick: () -> Unit) {
+    AppCard(padding = PaddingValues(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 10.dp), onClick = if (state.battery.isEmpty) null else onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             CardHeader("Body Battery", state.batteryNow, Modifier.padding(horizontal = 4.dp))
             if (state.battery.isEmpty) {
@@ -219,6 +228,12 @@ private fun BodyBatteryCard(state: HealthTodayState) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 LabelledMono("High", state.batteryHigh)
                 LabelledMono("Low", state.batteryLow)
+            }
+            state.batteryEvents?.let { line ->
+                Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(line, style = MonoNumber.copy(fontSize = 12.sp), color = Tokens.TextSoft, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Icon(Icons.Outlined.ChevronRight, contentDescription = "Open Body Battery day", tint = Tokens.Dim, modifier = Modifier.size(16.dp))
+                }
             }
         }
     }
@@ -248,6 +263,7 @@ private fun StressCard(state: HealthTodayState) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SleepCard(sleep: SleepCardData?, onClick: () -> Unit) {
     AppCard(padding = PaddingValues(start = 16.dp, end = 12.dp, top = 14.dp, bottom = 14.dp), onClick = if (sleep != null) onClick else null) {
@@ -265,10 +281,16 @@ private fun SleepCard(sleep: SleepCardData?, onClick: () -> Unit) {
                         sleep.scoreLabel?.let { AccentPill(it) }
                     }
                     BandBar(sleep.stageWeights, HealthColors.SleepStages, height = 8)
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         sleep.stageLabels.forEachIndexed { i, (name, dur) ->
                             LegendItem(HealthColors.SleepStages[i], name, dur, gap = 5)
                         }
+                    }
+                    sleep.needLine?.let { line ->
+                        Text(
+                            line, style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                            color = if (sleep.needMet) Tokens.Accent else Tokens.Warning, maxLines = 1, overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

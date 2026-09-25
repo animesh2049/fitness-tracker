@@ -141,9 +141,19 @@ fun TimeCurveChart(
     }
 }
 
+/** How a bucket's secondary value is drawn on a bar chart (version 0.5). */
+enum class SecondaryMode {
+    NONE,
+    /** The secondary value is the lower part of the bar (active calories inside total calories). */
+    STACK,
+    /** The secondary value is a tick across the bar (the sleep need over the time asleep). */
+    MARKER
+}
+
 /**
  * The Trends chart: bars for totals, a line with points otherwise. Tapping a bar or point selects
  * it, which highlights it and shows a label bubble above it. Null buckets are left empty.
+ * [secondary] and [secondaryMode] add a stacked part or a marker per bar.
  */
 @Composable
 fun TrendChart(
@@ -156,7 +166,9 @@ fun TrendChart(
     max: Double,
     gridLabels: List<String>,
     bubbleText: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    secondary: List<Double?> = emptyList(),
+    secondaryMode: SecondaryMode = SecondaryMode.NONE
 ) {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -213,6 +225,23 @@ fun TrendChart(
                     size = Size(barW, (bottom - y).coerceAtLeast(2.dp.toPx())),
                     cornerRadius = CornerRadius(3.dp.toPx())
                 )
+                val s = secondary.getOrNull(i) ?: return@forEachIndexed
+                when (secondaryMode) {
+                    SecondaryMode.STACK -> {
+                        val ys = yAt(s.coerceIn(min, v))
+                        drawRoundRect(
+                            if (i == selected) Tokens.Text.copy(alpha = 0.8f) else Tokens.Accent,
+                            topLeft = Offset(xAt(i) - barW / 2, ys),
+                            size = Size(barW, (bottom - ys).coerceAtLeast(0f)),
+                            cornerRadius = CornerRadius(3.dp.toPx())
+                        )
+                    }
+                    SecondaryMode.MARKER -> {
+                        val ym = yAt(s)
+                        drawLine(Tokens.Text, Offset(xAt(i) - barW / 2 - 4.dp.toPx(), ym), Offset(xAt(i) + barW / 2 + 4.dp.toPx(), ym), strokeWidth = 2.dp.toPx())
+                    }
+                    SecondaryMode.NONE -> Unit
+                }
             }
         } else {
             val path = Path()

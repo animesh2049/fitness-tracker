@@ -5,6 +5,7 @@ import android.provider.OpenableColumns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.animesh.fitnesstracker.di.AppContainer
+import com.animesh.fitnesstracker.garmin.fitimport.HealthRebuild
 import com.animesh.fitnesstracker.garmin.sync.ImportSummary
 import com.animesh.fitnesstracker.garmin.sync.SyncLogLine
 import com.animesh.fitnesstracker.garmin.sync.SyncState
@@ -53,6 +54,9 @@ data class WatchScreenState(
     /** Outcome of the last export, import or re-import, shown under the Data card. */
     val dataStatus: String? = null,
     val dataBusy: Boolean = false,
+    /** Version 0.5: the automatic rebuild after a schema change, while it runs or when it failed. */
+    val rebuildStatus: String? = null,
+    val rebuildError: Boolean = false,
     val loaded: Boolean = false
 ) {
     val paired: Boolean get() = watch != null
@@ -148,16 +152,24 @@ class WatchViewModel(private val c: AppContainer) : ViewModel() {
 
     private val files = combine(
         c.syncedFiles.observeCount(),
-        c.syncedFiles.observeAll().map { list -> list.mapNotNull { it.watchTimestamp }.minOrNull() }.distinctUntilChanged()
-    ) { count, earliest -> count to earliest }
+        c.syncedFiles.observeAll().map { list -> list.mapNotNull { it.watchTimestamp }.minOrNull() }.distinctUntilChanged(),
+        c.healthRebuild.state
+    ) { count, earliest, rebuild -> Triple(count, earliest, rebuild) }
 
     val state: StateFlow<WatchScreenState> = combine(c.watch.watch, c.watch.syncState, c.watch.log, files, local) { w, sync, log, f, l ->
+        val rebuild = f.third
         WatchScreenState(
             watch = w,
             syncState = sync,
             log = log,
             fileCount = f.first,
             earliestFileSeconds = f.second,
+            rebuildStatus = when (rebuild) {
+                is HealthRebuild.State.Running -> "Rebuilding health data from stored files\u2026"
+                is HealthRebuild.State.Failed -> "Rebuild failed: ${rebuild.message}"
+                else -> null
+            },
+            rebuildError = rebuild is HealthRebuild.State.Failed,
             scanning = l.scanning,
             scanned = l.scanned,
             hits = l.hits,

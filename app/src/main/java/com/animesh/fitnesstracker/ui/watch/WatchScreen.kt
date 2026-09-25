@@ -177,7 +177,7 @@ fun WatchScreen(onBack: () -> Unit) {
     if (confirmReimport) {
         ConfirmDialog(
             title = "Re-import all stored files?",
-            body = "Clears the imported health data and reads every stored FIT file again (${state.filesLabel} files). Workouts and diet data are not touched. This can take a few minutes.",
+            body = "Clears the imported health data and reads every stored FIT file again (${state.filesLabel} files), rebuilding steps, floors, sleep scores, Body Battery events and activities. Workouts and diet data are not touched. This can take a few minutes.",
             confirmText = "Re-import",
             onConfirm = { confirmReimport = false; vm.reimportAll() },
             onDismiss = { confirmReimport = false }
@@ -355,6 +355,7 @@ private fun DataSection(state: WatchScreenState, onExport: () -> Unit, onImport:
     when {
         state.dataBusy -> StatusLine("Working…", error = false)
         state.dataStatus != null -> StatusLine(state.dataStatus, error = state.dataStatus.startsWith("Failed"))
+        state.rebuildStatus != null -> StatusLine(state.rebuildStatus, error = state.rebuildError)
     }
 }
 

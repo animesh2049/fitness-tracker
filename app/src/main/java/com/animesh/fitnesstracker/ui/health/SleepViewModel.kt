@@ -7,7 +7,11 @@ import com.animesh.fitnesstracker.data.model.RestingHrDaily
 import com.animesh.fitnesstracker.data.model.SleepStage
 import com.animesh.fitnesstracker.di.AppContainer
 import com.animesh.fitnesstracker.domain.health.HypnogramSegment
+import com.animesh.fitnesstracker.domain.health.SleepNeeds
 import com.animesh.fitnesstracker.domain.health.SleepNights
+import com.animesh.fitnesstracker.domain.health.SleepScoreBreakdown
+import com.animesh.fitnesstracker.ui.theme.Tokens
+import androidx.compose.ui.graphics.Color
 import com.animesh.fitnesstracker.repository.NightInputs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +28,12 @@ data class StageRow(val lane: Int, val name: String, val fraction: Float, val du
 
 data class SleepTile(val label: String, val value: String, val sub: String)
 
+/** One row of the score breakdown: name, optional detail under it, bar fill and colour, the score and the watch's word for it. */
+data class BreakdownRow(val name: String, val detail: String?, val fraction: Float, val color: Color, val score: String, val band: String)
+
+/** The Sleep Coach card. */
+data class NeedUi(val need: String, val slept: String, val shortBy: String, val met: Boolean, val fraction: Float, val baselineLine: String?)
+
 data class SleepState(
     val loading: Boolean = true,
     val epochDay: Long = 0,
@@ -38,7 +48,12 @@ data class SleepState(
     val bars: List<HypnogramBar> = emptyList(),
     val ticks: List<AxisLabel> = emptyList(),
     val rows: List<StageRow> = emptyList(),
-    val tiles: List<SleepTile> = emptyList()
+    val tiles: List<SleepTile> = emptyList(),
+    /** Version 0.5: the watch's score breakdown, empty when the sleep file had none. */
+    val breakdown: List<BreakdownRow> = emptyList(),
+    val breakdownCaption: String = "",
+    /** Version 0.5: Sleep Coach need versus the night, null without a need. */
+    val need: NeedUi? = null
 )
 
 private data class NightBundle(val night: NightInputs, val restingHr: RestingHrDaily?, val minutes: List<HealthMinute>)
@@ -122,7 +137,21 @@ class SleepViewModel(private val c: AppContainer, initialDay: Long) : ViewModel(
             bars = bars,
             ticks = ticks,
             rows = rows,
-            tiles = tiles(b, asleepSeconds)
+            tiles = tiles(b, asleepSeconds),
+            breakdown = if (night.hasScoreBreakdown) SleepScoreBreakdown.rows(night).map { r ->
+                BreakdownRow(r.name, r.detail, r.score / 100f, scoreColor(r.score), r.score.toString(), r.band)
+            } else emptyList(),
+            breakdownCaption = night.score?.let { "what made $it" } ?: "",
+            need = SleepNeeds.of(night)?.let { n ->
+                NeedUi(
+                    need = HealthFormat.durationMinutes(n.needMin),
+                    slept = HealthFormat.durationMinutes(n.sleptMin),
+                    shortBy = if (n.met) "Met" else HealthFormat.durationMinutes(n.shortByMin),
+                    met = n.met,
+                    fraction = n.fraction,
+                    baselineLine = n.baselineMin?.let { "Your usual need is ${HealthFormat.durationMinutes(it)}." }
+                )
+            }
         )
     }
 
@@ -147,19 +176,47 @@ class SleepViewModel(private val c: AppContainer, initialDay: Long) : ViewModel(
         }
         val restingValue = b.restingHr?.bpm?.toString() ?: night.lowestHr?.toString() ?: "n/a"
 
-        return listOf(
+        val tiles = mutableListOf(
             SleepTile("Restless", night.restlessMoments?.toString() ?: "n/a", if (asleepSeconds > 0) "moments" else "not counted"),
             SleepTile("HRV", hrvValue?.let { "${it.roundToInt()} ms" } ?: "n/a", hrvSub),
             SleepTile("Respiration", night.avgRespiration?.let { HealthFormat.oneDecimal(it) } ?: "n/a", "breaths / min"),
             SleepTile("SpO2", night.avgSpo2?.let { "${it.roundToInt()}%" } ?: "n/a", "overnight average"),
-            SleepTile("Resting HR", restingValue, lowestSub),
-            SleepTile("Skin temp", "n/a", "not read yet")
+            SleepTile("Resting HR", restingValue, lowestSub)
         )
+        val start = night.bodyBatteryStart
+        val end = night.bodyBatteryEnd
+        if (start != null && end != null) {
+            tiles += SleepTile("Body Battery", "$start \u2192 $end", batteryGainSub(end - start))
+        }
+        night.skinTempDeviation?.let { dev ->
+            tiles += SleepTile("Skin temp", skinTempValue(dev), "vs your baseline")
+        }
+        return tiles
     }
 
     companion object {
         /** Hypnogram lane for a FIT stage: awake on top, then REM, light, deep. */
         fun laneOf(stage: Int): Int = SleepNights.LANE_ORDER.indexOf(stage).coerceAtLeast(0)
+
+        /** Accent from 80, the dim bar colour from 60, the warning colour below. */
+        fun scoreColor(score: Int): Color = when {
+            score >= 80 -> Tokens.Accent
+            score >= 60 -> HealthColors.BarDim
+            else -> Tokens.Warning
+        }
+
+        /** "+51 overnight", "−3 overnight", "no change overnight". */
+        fun batteryGainSub(gain: Int): String = when {
+            gain > 0 -> "+$gain overnight"
+            gain < 0 -> "${HealthTodayViewModel.MINUS}${-gain} overnight"
+            else -> "no change overnight"
+        }
+
+        /** "+0.3°", "−0.4°": the overnight deviation with its sign and one decimal. */
+        fun skinTempValue(deviation: Double): String {
+            val magnitude = HealthFormat.fixedOneDecimal(kotlin.math.abs(deviation))
+            return (if (deviation < 0) HealthTodayViewModel.MINUS else "+") + magnitude + "\u00b0"
+        }
 
         /** Minutes awake at the very start of the night before the first sleep stage, 0 when the night opened asleep. */
         fun fellAsleepMinutes(segments: List<HypnogramSegment>): Int {

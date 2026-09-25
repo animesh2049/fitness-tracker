@@ -5,6 +5,8 @@ object HealthRoutes {
     const val HUB = "health"
     const val SLEEP = "health/sleep/{epochDay}"
     fun sleep(epochDay: Long) = "health/sleep/$epochDay"
+    const val BODY_BATTERY = "health/body-battery/{epochDay}"
+    fun bodyBattery(epochDay: Long) = "health/body-battery/$epochDay"
     const val TRENDS = "health/trends"
     const val ACTIVITIES = "health/activities"
     const val ACTIVITY = "health/activity/{activityId}"

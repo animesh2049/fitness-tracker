@@ -9,7 +9,10 @@ import com.animesh.fitnesstracker.data.model.Settings
 import com.animesh.fitnesstracker.data.model.SleepStage
 import com.animesh.fitnesstracker.data.model.StressSample
 import com.animesh.fitnesstracker.di.AppContainer
+import com.animesh.fitnesstracker.domain.health.BodyBatteryDay
+import com.animesh.fitnesstracker.domain.health.BodyBatteryEvents
 import com.animesh.fitnesstracker.domain.health.DaySummary
+import com.animesh.fitnesstracker.domain.health.SleepNeeds
 import com.animesh.fitnesstracker.domain.health.SleepNights
 import com.animesh.fitnesstracker.garmin.sync.SyncState
 import com.animesh.fitnesstracker.garmin.sync.WatchInfo
@@ -51,14 +54,17 @@ data class HubActivity(
     val linked: Boolean
 )
 
-/** The sleep card: window, asleep time, score pill and the four stage shares (deep, light, REM, awake). */
+/** The sleep card: window, asleep time, score pill, the four stage shares (deep, light, REM, awake) and the Sleep Coach line. */
 data class SleepCardData(
     val window: String,
     val duration: String,
     val scoreLabel: String?,
     val stageWeights: List<Float>,
     /** Name and duration per stage in the same order as [stageWeights]. */
-    val stageLabels: List<Pair<String, String>>
+    val stageLabels: List<Pair<String, String>>,
+    /** "Need 8 h 40 m · short by 1 h 28 m", null when the watch gave no need for the night (version 0.5). */
+    val needLine: String? = null,
+    val needMet: Boolean = false
 )
 
 data class HealthTodayState(
@@ -75,8 +81,14 @@ data class HealthTodayState(
     val sync: SyncStrip? = null,
     val steps: String = "0",
     val stepsSub: String = "",
+    val floors: String = "0",
+    val floorsSub: String = "",
     val distance: String = "0 km",
+    /** Total calories (resting plus active) when the resting rate is known, else active only. */
     val kcal: String = "0",
+    val kcalSub: String = "",
+    /** "+51 charged · −34 drained · overnight 37 → 88", null when the day has neither events nor overnight values. */
+    val batteryEvents: String? = null,
     val heartRate: CurveSeries = CurveSeries.EMPTY,
     val hrGrid: List<Float> = listOf(60f, 100f, 140f),
     val hrRange: String = "",
@@ -165,7 +177,11 @@ class HealthTodayViewModel(private val c: AppContainer) : ViewModel() {
         val d = inputs.epochDay
         val today = Dates.todayEpochDay()
         val isToday = d == today
-        val summary = DaySummary.compute(d, inputs.minutes, inputs.stress, inputs.restingHr?.bpm, inputs.intensityWeek, bundle.settings.stepGoal)
+        val summary = DaySummary.compute(
+            d, inputs.minutes, inputs.stress, inputs.restingHr?.bpm, inputs.intensityWeek, bundle.settings.stepGoal,
+            restingMetabolicRate = inputs.restingMetabolicRate?.value?.toInt(), nowSeconds = now / 1000
+        )
+        val batteryDay = BodyBatteryEvents.day(inputs.bodyBatteryEvents, bundle.activities.map { it.first }, inputs.night)
         val acts = bundle.activities.map { (a, sessionName) -> hubActivity(a, sessionName) }
         val empty = watch == null && files == 0 && !summary.hasData && acts.isEmpty() && inputs.night == null
 
@@ -189,8 +205,12 @@ class HealthTodayViewModel(private val c: AppContainer) : ViewModel() {
             sync = syncStrip(watch, sync, files, now),
             steps = HealthFormat.thousands(summary.steps),
             stepsSub = HealthFormat.percentOfGoal(summary.steps, summary.stepGoal),
+            floors = summary.floors.toString(),
+            floorsSub = floorsSub(summary.ascentM, summary.descentFloors),
             distance = HealthFormat.km(summary.distanceM),
-            kcal = HealthFormat.thousands(summary.activeKcal),
+            kcal = HealthFormat.thousands(summary.totalKcal ?: summary.activeKcal),
+            kcalSub = caloriesSub(summary.activeKcal, summary.restingKcal, isToday),
+            batteryEvents = batteryLine(batteryDay),
             heartRate = hr,
             hrRange = if (summary.hrMin != null && summary.hrMax != null) "${summary.hrMin} to ${summary.hrMax.value} bpm" else "no readings",
             hrResting = summary.restingHr?.toFloat(),
@@ -209,12 +229,15 @@ class HealthTodayViewModel(private val c: AppContainer) : ViewModel() {
                 val totals = SleepNights.totals(n)
                 val stageSeconds = listOf(totals.deepSeconds, totals.lightSeconds, totals.remSeconds, totals.awakeSeconds)
                 val names = listOf(SleepStage.DEEP, SleepStage.LIGHT, SleepStage.REM, SleepStage.AWAKE).map { SleepNights.STAGE_NAMES.getValue(it) }
+                val need = SleepNeeds.of(n)
                 SleepCardData(
                     window = HealthFormat.window(n.startTimestamp, n.endTimestamp),
                     duration = HealthFormat.duration(if (totals.asleepSeconds > 0) totals.asleepSeconds else n.durationSeconds),
                     scoreLabel = n.score?.let { "Score $it" },
                     stageWeights = stageSeconds.map { it.toFloat() },
-                    stageLabels = names.zip(stageSeconds.map { HealthFormat.duration(it) })
+                    stageLabels = names.zip(stageSeconds.map { HealthFormat.duration(it) }),
+                    needLine = need?.let { needLine(it.needMin, it.met, it.shortByMin) },
+                    needMet = need?.met ?: false
                 )
             },
             hrv = hrv?.lastNightAvg?.let { "${it.toInt()} ms" } ?: "n/a",
@@ -297,7 +320,38 @@ class HealthTodayViewModel(private val c: AppContainer) : ViewModel() {
 
     companion object {
         const val MAX_DAYS_BACK = 365L
+        /** Unicode minus, so drained numbers read as signed values rather than hyphenated words. */
+        const val MINUS = "\u2212"
         private const val HR_BUCKET_SECONDS = 300L
+
+        /** "12.4 m up · 2 down", "3.1 m up", or "no climb recorded". */
+        fun floorsSub(ascentM: Double, descentFloors: Int): String {
+            if (ascentM <= 0.0 && descentFloors <= 0) return "no climb recorded"
+            val up = "${HealthFormat.oneDecimal(ascentM)} m up"
+            return if (descentFloors > 0) "$up · $descentFloors down" else up
+        }
+
+        /** "active 412 · resting 1,693 so far" today, "active 412 · resting 1,693" for a past day, or the fallback without a resting rate. */
+        fun caloriesSub(activeKcal: Int, restingKcal: Int?, isToday: Boolean): String {
+            if (restingKcal == null) return "active kcal, no resting rate yet"
+            val resting = "resting ${HealthFormat.thousands(restingKcal)}"
+            return "active ${HealthFormat.thousands(activeKcal)} · $resting" + if (isToday) " so far" else ""
+        }
+
+        /** The Body Battery card's second footer line, null when there is nothing to say. */
+        fun batteryLine(day: BodyBatteryDay): String? = batteryLine(day.chargedTotal, day.drainedTotal, day.overnightStart, day.overnightEnd)
+
+        fun batteryLine(charged: Int, drained: Int, overnightStart: Int?, overnightEnd: Int?): String? {
+            val parts = ArrayList<String>()
+            if (charged > 0) parts += "+$charged charged"
+            if (drained > 0) parts += "$MINUS$drained drained"
+            if (overnightStart != null && overnightEnd != null) parts += "overnight $overnightStart \u2192 $overnightEnd"
+            return if (parts.isEmpty()) null else parts.joinToString(" · ")
+        }
+
+        /** "Need 8 h 40 m · short by 1 h 28 m" or "Need 8 h 00 m · need met". */
+        fun needLine(needMin: Int, met: Boolean, shortByMin: Int): String =
+            "Need ${HealthFormat.durationMinutes(needMin)} · " + if (met) "need met" else "short by ${HealthFormat.durationMinutes(shortByMin)}"
         private const val HR_BUCKETS = 86_400 / HR_BUCKET_SECONDS.toInt()
         /** Runs break when consecutive samples are further apart than this. */
         private const val HR_GAP_BUCKETS = 3

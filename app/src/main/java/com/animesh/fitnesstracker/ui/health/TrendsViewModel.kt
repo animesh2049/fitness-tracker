@@ -35,6 +35,9 @@ data class TrendsState(
     val values: List<Double?> = emptyList(),
     val labels: List<String> = emptyList(),
     val bars: Boolean = false,
+    /** Version 0.5: the stacked part (calories) or the marker (sleep need) per bucket. */
+    val secondary: List<Double?> = emptyList(),
+    val secondaryMode: SecondaryMode = SecondaryMode.NONE,
     val selected: Int? = null,
     val min: Double = 0.0,
     val max: Double = 1.0,
@@ -109,6 +112,8 @@ class TrendsViewModel(private val c: AppContainer) : ViewModel() {
             values = values,
             labels = r.buckets.map { it.label },
             bars = r.bars,
+            secondary = if (secondaryMode(m) == SecondaryMode.NONE) emptyList() else r.buckets.map { it.secondary },
+            secondaryMode = secondaryMode(m),
             selected = selected,
             min = min,
             max = max,
@@ -149,18 +154,28 @@ class TrendsViewModel(private val c: AppContainer) : ViewModel() {
             TrendPeriod.YEAR12 -> "year"
         }
 
+        /** How the chart draws a bucket's secondary value, if the metric has one. */
+        fun secondaryMode(m: TrendMetric): SecondaryMode = when (m) {
+            TrendMetric.CALORIES -> SecondaryMode.STACK
+            TrendMetric.SLEEP_NEED -> SecondaryMode.MARKER
+            else -> SecondaryMode.NONE
+        }
+
         /** A value in the metric's display form: "8,412", "7 h 12 m", "58 ms", "54". */
         fun format(m: TrendMetric, v: Double): String = when (m) {
-            TrendMetric.STEPS -> HealthFormat.thousands(v.roundToInt())
-            TrendMetric.SLEEP_DURATION -> HealthFormat.durationMinutes(v.roundToInt())
+            TrendMetric.STEPS, TrendMetric.CALORIES -> HealthFormat.thousands(v.roundToInt())
+            TrendMetric.SLEEP_DURATION, TrendMetric.SLEEP_NEED -> HealthFormat.durationMinutes(v.roundToInt())
             TrendMetric.HRV -> "${HealthFormat.oneDecimal(v)} ms"
+            TrendMetric.FLOORS -> v.roundToInt().toString()
             else -> HealthFormat.oneDecimal(v)
         }
 
         /** Short grid label: "9k" for steps, hours for sleep, one decimal otherwise. */
         fun gridLabel(m: TrendMetric, v: Double): String = when (m) {
             TrendMetric.STEPS -> "${(v / 1000).roundToInt()}k"
-            TrendMetric.SLEEP_DURATION -> "${HealthFormat.oneDecimal(v / 60)} h"
+            TrendMetric.CALORIES -> if (v >= 1000) "${HealthFormat.oneDecimal(v / 1000)}k" else v.roundToInt().toString()
+            TrendMetric.SLEEP_DURATION, TrendMetric.SLEEP_NEED -> "${HealthFormat.oneDecimal(v / 60)} h"
+            TrendMetric.FLOORS -> v.roundToInt().toString()
             else -> HealthFormat.oneDecimal(v)
         }
 
@@ -208,6 +223,18 @@ class TrendsViewModel(private val c: AppContainer) : ViewModel() {
             TrendMetric.INTENSITY_MINUTES to MetricInfo(
                 "minutes / day", "Intensity minutes", "Weekly, vigorous counts double",
                 "Moderate plus two times vigorous minutes, reset every Monday. Target 150."
+            ),
+            TrendMetric.FLOORS to MetricInfo(
+                "floors / day", "Floors climbed", "3 metres per floor",
+                "The watch's barometric altimeter counts ascent; the app turns metres into floors at 3 m each, the watch's own rule."
+            ),
+            TrendMetric.CALORIES to MetricInfo(
+                "kcal / day", "Calories", "Resting plus active",
+                "Resting is the watch's resting metabolic rate, prorated through today; active comes from the monitoring file. The lighter part of each bar is active."
+            ),
+            TrendMetric.SLEEP_NEED to MetricInfo(
+                "minutes asleep", "Sleep vs need", "Sleep Coach",
+                "Bars are time asleep; the tick is the need the watch set for that night."
             )
         )
     }
